@@ -1,0 +1,8 @@
+#
+# Configuration file for the default theme
+#
+$background = "data/default.png"
+$icon = "data/icon.png"
+#$font = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
+$font = "/Users/boersma/Library/Fonts/Hack-Bold.ttf"
+$opacity = 0.8
