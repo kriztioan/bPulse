@@ -6,8 +6,8 @@ OBJ_DIR:=obj
 CPP_FILES:=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(PLATFORM_DIR)/*.cpp)
 OBJ_FILES:=$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(CPP_FILES)) 
 OBJ_FILES:=$(patsubst $(PLATFORM_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(OBJ_FILES)) 
-CPPFLAGS:=-O3 -I ./include -I $(PLATFORM_DIR) -std=c++11
-LIBS:=-lpng -lX11 -lXext -lXrender -lfreetype
+CPPFLAGS:=-O3 -I./include -I/opt/X11/include -I$(PLATFORM_DIR) -std=c++11
+LIBS:=-lpng -L/opt/X11/lib -lX11 -lXext -lXrender -lfreetype
 FRAMEWORKS:=
 ifeq ($(PLATFORM),Darwin)
 	CPPFLAGS+=-I /usr/local/include/freetype2

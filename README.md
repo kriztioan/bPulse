@@ -1,6 +1,6 @@
 # bPulse
 
-`bPulse` is an [iPulse](https://ipulseapp.com)-inspired graphical system monitoring tool for `Linux` and `MacOS`. It is written in `C++` and relies on `X11`, `X11's Shape Extension`, `X11's Back-buffer Extension`, `Xrender`, `libpng`, and `FreeType` fonts. `bPulse` is capable of monitoring CPU, memory, disk-I/O, network-I/O, disk usage, users logged in, and keep track of the date and time.
+`bPulse` is an [iPulse](https://ipulseapp.com)-inspired (by [iconfactory](https://iconfactory.com)) graphical system monitoring tool for `Linux` and `MacOS`. It is written in `C++` and relies on `X11`, `X11's Shape Extension`, `X11's Back-buffer Extension`, `Xrender`, `libpng`, and `FreeType` fonts. `bPulse` is capable of monitoring CPU, memory, disk-I/O, network-I/O, disk usage, users logged in, and keep track of the date and time.
 
 Running `bPulse` on `MaOS` requires that the [XQuartz](https://www.xquartz.org) `X11` window manager is installed.
 
