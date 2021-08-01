@@ -10,8 +10,8 @@
 #ifndef IMAGE_H_
 #define IMAGE_H_
 
+#include <cstdlib>
 #include <png.h>
-
 #include <string>
 
 class Image {
