@@ -56,8 +56,6 @@ ManagedWindow *mwindow = nullptr;
 
 int timeout;
 
-bool animate = false;
-
 std::string font;
 
 int main(int argc, char *argv[], char **envp) {
@@ -98,8 +96,6 @@ int main(int argc, char *argv[], char **envp) {
                         ProcManager::Masks::Disk | ProcManager::Masks::Eth |
                         ProcManager::Masks::IO | ProcManager::Masks::Time |
                         ProcManager::Masks::Users);
-
-  pmanager->Probe(); // initialize!
 
   std::function<int(void)> chandler = CallbackHandler;
 
@@ -161,24 +157,14 @@ int CallbackHandler() {
 
   static unsigned long timer = 0;
 
-  if (animate) {
+  amanager->SetTimeout(1000 / FRAME_RATE);
 
-    amanager->SetTimeout(1000 / FRAME_RATE);
-
-    if (timer % (timeout / (1000 / FRAME_RATE)) == 0) {
-
-      pmanager->Probe();
-    }
-
-    ++timer;
-  } else {
-
-    amanager->SetTimeout(1000 / 2);
+  if (timer % (timeout / (1000 / FRAME_RATE)) == 0) {
 
     pmanager->Probe();
   }
 
-  animate = false;
+  ++timer;
 
   HandleIO();
 
@@ -237,66 +223,23 @@ int HandleCPU() {
 
   for (int i = 0; i < 3; i++) {
 
-    if (cpu_in[i] > 0.05 || cpu[i] > 0.05) {
-
-      if (cpu_in[i] > 1.05 * cpu[i]) {
-
-        if (cpu[i] < 0.01) {
-
-          cpu[i] = 0.5 * cpu_in[i];
-        }
-
-        cpu[i] *= 1.2;
-
-        animate = true;
-      } else if (cpu_in[i] < 0.9 * cpu[i]) {
-
-        cpu[i] *= 0.8;
-
-        animate = true;
-      }
-    }
+    cpu[i] = 0.9f * cpu[i] + 0.1f * cpu_in[i];
 
     sum += cpu[i];
   }
 
-  if (sum > 1) {
-
-    for (int i = 0; i < 3; i++) {
-
-      cpu[i] /= sum;
-    }
-
-    sum = 1.0;
-  }
-
-  if (animate) {
-
-    if (sum <= 0.01) {
-
-      return 0;
-    }
-
+  if (sum > 0.0f)
     mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:14/07/68/ff");
 
-    sum -= cpu[NICE];
+  sum -= cpu[NICE];
 
-    if (sum <= 0.01) {
-
-      return 0;
-    }
-
+  if (sum > 0.0f)
     mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:56/52/9e/ff");
 
-    sum -= cpu[USER];
+  sum -= cpu[USER];
 
-    if (sum <= 0.01) {
-
-      return 0;
-    }
-
+  if (sum > 0.0f)
     mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:af/ae/c4/ff");
-  }
 
   return 0;
 }
@@ -362,65 +305,26 @@ int HandleIO() {
 
   static double io[2] = {0, 0};
 
-  double io_in[2] = {1000.0 * pmanager->io.read / timeout,
-                     1000.0 * pmanager->io.write / timeout};
-
-  static float steps[4] = {1, 1024, 100, 1024 / 100};
+  double io_in[2] = {static_cast<double>(pmanager->io.read) / timeout,
+                     static_cast<double>(pmanager->io.write) / timeout};
 
   for (int i = 0; i < 2; i++) {
 
-    int j = 1;
+    while (io_in[i] >= 1023.0) {
 
-    while (io_in[i] > 90) {
-
-      io_in[i] /= steps[j++];
+      io_in[i] /= 1024.0;
     }
+
+    io[i] = 0.9 * io[i] + 0.1 * 90.0 * io_in[i] / 1024.0;
   }
 
-  for (int i = 0; i < 2; i++) {
+  if (io[IN] > 0.0)
+    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180, 180 + io[IN],
+                     "rgba:ff/2c/1c/ff");
 
-    if (io_in[i] > 0.05 || io[i] > 0.05) {
-
-      if (io_in[i] > 1.05 * io[i]) {
-
-        if (io[i] < 0.01) {
-
-          io[i] = 0.5 * io_in[i];
-        }
-
-        io[i] *= 1.2;
-
-        animate = true;
-      } else if (io_in[i] < 0.9 * io[i]) {
-
-        io[i] *= 0.8;
-
-        animate = true;
-      }
-    }
-  }
-
-  for (int i = 0; i < 2; i++) {
-
-    if (io[i] > 90) {
-
-      io[i] = 90;
-    }
-  }
-
-  if (animate) {
-
-    if (io[IN] > 1) {
-
-      mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180, 180 + io[IN],
-                       "rgba:ff/2c/1c/ff");
-    }
-
-    if (io[OUT] > 1) {
-      mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 360 - io[OUT], 360,
-                       "rgba:66/ff/4f/ff");
-    }
-  }
+  if (io[OUT] > 0.0)
+    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 360 - io[OUT], 360,
+                     "rgba:66/ff/4f/ff");
 
   return 0;
 }
@@ -429,203 +333,114 @@ int HandleEth() {
 
   static double eth[2] = {0, 0};
 
-  double eth_in[2] = {1000.0 * pmanager->eth.sent / timeout,
-                      1000.0 * pmanager->eth.received / timeout};
-
-  static float steps[4] = {1, 1024, 100, 1024 / 100};
-
-  for (int i = 0; i < 2; i++) {
-
-    int j = 1;
-
-    while (eth_in[i] > 90) {
-
-      eth_in[i] /= steps[j++];
-    }
-  }
+  double eth_in[2] = {static_cast<double>(pmanager->eth.sent) /
+                          static_cast<double>(timeout),
+                      static_cast<double>(pmanager->eth.received) /
+                          static_cast<double>(timeout)};
 
   for (int i = 0; i < 2; i++) {
 
-    if (eth_in[i] > 0.05 || eth[i] > 0.05) {
+    while (eth_in[i] >= 1023.0) {
 
-      if (eth_in[i] > 1.05 * eth[i]) {
-
-        if (eth[i] < 0.01) {
-
-          eth[i] = 0.5 * eth_in[i];
-
-          animate = true;
-        }
-
-        eth[i] *= 1.2;
-      } else if (eth_in[i] < 0.9 * eth[i]) {
-
-        eth[i] *= 0.8;
-
-        animate = true;
-      }
+      eth_in[i] /= 1024.0;
     }
+
+    eth[i] = 0.9 * eth[i] + 0.1 * 90.0 * eth_in[i] / 1024.0;
   }
 
-  for (int i = 0; i < 2; i++) {
+  if (eth[SENT] > 0.0)
+    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, eth[SENT], "rgba:11/00/82/ff");
 
-    if (eth[i] > 90) {
-
-      eth[i] = 90;
-    }
-  }
-
-  if (animate) {
-
-    if (eth[SENT] > 1) {
-
-      mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, eth[SENT], "rgba:11/00/82/ff");
-    }
-
-    if (eth[RECV] > 1) {
-
-      mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180 - eth[RECV], 180,
-                       "rgba:39/9c/c4/ff");
-    }
-  }
+  if (eth[RECV] > 0.0)
+    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180 - eth[RECV], 180,
+                     "rgba:39/9c/c4/ff");
 
   return 0;
 }
 
 int HandleMem() {
 
-  static float free = 0, buffer = 0, shared = 0, unavailable = 0, sum;
+  static float free = 180.0f * pmanager->memory.freeram /
+                      pmanager->memory.totalram,
+               buffer = 180.0f * pmanager->memory.bufferram /
+                        pmanager->memory.totalram,
+               shared = 180.0f * pmanager->memory.sharedram /
+                        pmanager->memory.totalram,
+               kernel =
+                   180.0f *
+                   (pmanager->memory.totalram - pmanager->memory.freeram -
+                    pmanager->memory.bufferram - pmanager->memory.sharedram) /
+                   pmanager->memory.totalram;
 
-  if (pmanager->memory.freeram > 1.05 * free) {
+  free = 0.9f * free +
+         0.1f * 180.0f * pmanager->memory.freeram / pmanager->memory.totalram;
 
-    if (free < 1) {
+  buffer = 0.9f * buffer + 0.1f * 180.0f * pmanager->memory.bufferram /
+                               pmanager->memory.totalram;
 
-      free = 0.5 * pmanager->memory.freeram;
-    }
+  shared = 0.9f * shared + 0.1f * 180.0f * pmanager->memory.sharedram /
+                               pmanager->memory.totalram;
 
-    free *= 1.2;
+  kernel = 0.9f * kernel +
+           0.1f * 180.0f *
+               (pmanager->memory.totalram - pmanager->memory.freeram -
+                pmanager->memory.bufferram - pmanager->memory.sharedram) /
+               pmanager->memory.totalram;
 
-    animate = true;
-  } else if (pmanager->memory.freeram < 0.95 * free) {
+  float val0 = 0.0f, val1 = free;
 
-    free *= 0.95;
+  if (val1 > 0.0f)
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:ff/00/00/ff");
 
-    animate = true;
-  }
+  val0 = val1;
+  val1 += buffer;
 
-  if (pmanager->memory.bufferram > 1.05 * buffer) {
+  if (val1 > 0.0f)
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/ff/00/ff");
 
-    if (buffer < 1) {
+  val0 = val1;
+  val1 += shared;
 
-      buffer = 0.5 * pmanager->memory.bufferram;
-    }
+  if (val1 > 0.0f)
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/00/ff/ff");
 
-    buffer *= 1.2;
+  val0 = val1;
+  val1 += kernel;
 
-    animate = true;
-  } else if (pmanager->memory.bufferram < 0.95 * buffer) {
-
-    buffer *= 0.95;
-
-    animate = true;
-  }
-
-  if (pmanager->memory.sharedram > 1.05 * shared) {
-
-    if (shared < 1) {
-
-      shared = 0.5 * pmanager->memory.sharedram;
-    }
-
-    shared *= 1.2;
-
-    animate = true;
-  } else if (pmanager->memory.sharedram < 0.95 * shared) {
-
-    shared *= 0.95;
-
-    animate = true;
-  }
-
-  unsigned long kernelram =
-                    pmanager->memory.totalram - pmanager->memory.freeram -
-                    pmanager->memory.bufferram - pmanager->memory.sharedram,
-                totalram = pmanager->memory.totalram + kernelram;
-
-  if (kernelram > 1.05 * unavailable) {
-
-    if (unavailable < 1) {
-
-      unavailable = 0.5 * kernelram;
-    }
-
-    unavailable *= 1.2;
-
-    animate = true;
-  } else if (kernelram < 0.95 * unavailable) {
-
-    unavailable *= 0.95;
-
-    animate = true;
-  }
-
-  sum = free + buffer + shared + unavailable;
-
-  if (sum > totalram) {
-
-    free = totalram * free / sum;
-
-    buffer = totalram * buffer / sum;
-
-    shared = totalram * shared / sum;
-
-    unavailable = totalram * unavailable / sum;
-  }
-
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 0, 180 * free / totalram,
-                   "rgba:ff/00/00/55");
-
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180 * free / totalram,
-                   180 * (free + buffer) / totalram, "rgba:00/ff/00/ff");
-
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180 * (free + buffer) / totalram,
-                   180 * (free + buffer + shared) / totalram,
-                   "rgba:00/00/ff/ff");
-
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2,
-                   180 * (free + buffer + shared) / totalram, 180,
-                   "rgba:ff/ff/00/ff");
+  if (val1 > 0.0f)
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:ff/ff/00/ff");
 
   return 0;
 }
 
 int HandleDisk() {
 
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180,
-                   180 + static_cast<float>(180 * pmanager->disk.f_bfree) /
-                             pmanager->disk.f_blocks,
+  static float free = static_cast<float>(pmanager->disk.f_bfree) /
+                      static_cast<float>(pmanager->disk.f_blocks);
+
+  free = 0.9f * free + 0.1f * static_cast<float>(pmanager->disk.f_bfree) /
+                           static_cast<float>(pmanager->disk.f_blocks);
+
+  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180, 180 + 180.0f * free,
                    "rgba:bd/56/90/ff");
 
-  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2,
-                   180 + static_cast<float>(180 * pmanager->disk.f_bfree) /
-                             pmanager->disk.f_blocks,
-                   360, "rgba:a2/2e/d5/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180.0f + 180.0f * free, 360,
+                   "rgba:a2/2e/d5/ff");
 
   return 0;
 }
 
 int HandleUser() {
 
-    if (!pmanager->users.front().empty()) {
-      mwindow->DrawText(CEN_X, CEN_Y - 4, pmanager->users.front().c_str(),
-                        font.c_str(), 10, "rgba:dd/dd/dd/ff",
-                        TEXT::ALIGN::CENTER);
+  if (!pmanager->users.front().empty()) {
+    mwindow->DrawText(CEN_X, CEN_Y - 4, pmanager->users.front().c_str(),
+                      font.c_str(), 10, "rgba:dd/dd/dd/ff",
+                      TEXT::ALIGN::CENTER);
 
-      mwindow->DrawText(CEN_X, CEN_Y + 24,
-                        std::to_string(pmanager->users.size()).c_str(),
-                        font.c_str(), 10, "rgba:dd/dd/dd/ff",
-                        TEXT::ALIGN::LEFT);
-    }
+    mwindow->DrawText(CEN_X, CEN_Y + 24,
+                      std::to_string(pmanager->users.size()).c_str(),
+                      font.c_str(), 10, "rgba:dd/dd/dd/ff", TEXT::ALIGN::LEFT);
+  }
 
   return 0;
 }
