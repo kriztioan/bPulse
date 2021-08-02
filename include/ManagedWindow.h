@@ -50,6 +50,8 @@ public:
 
   int SetOpacity(float opacity);
 
+  bool SetAlwaysOnTop(bool state);
+
   int Sync();
 
   int Scale(XFixed factor);

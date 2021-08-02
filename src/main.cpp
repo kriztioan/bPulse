@@ -116,6 +116,8 @@ int main(int argc, char *argv[], char **envp) {
       atoi(smanager->GetOptionForKey("ypos").c_str()), background->width,
       background->height, ehandler, background, icon);
 
+  mwindow->SetAlwaysOnTop(atoi(smanager->GetOptionForKey("alwaysontop").c_str()));
+
   mwindow->SetOpacity(atof(tmanager->GetOptionForKey("opacity").c_str()));
 
   delete background;

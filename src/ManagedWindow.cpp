@@ -322,3 +322,33 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
 
   return 0;
 }
+
+bool ManagedWindow::SetAlwaysOnTop(bool state) {
+
+  Atom netWmState = XInternAtom(xdisplay, "_NET_WM_STATE", 1),
+       netWmStateAbove = XInternAtom(xdisplay, "_NET_WM_STATE_ABOVE", 1);
+
+  if (netWmStateAbove != None && netWmState != None) {
+    XClientMessageEvent xclient;
+    bzero(&xclient, sizeof(XClientMessageEvent));
+    xclient.type = ClientMessage;
+    xclient.window = xwindow;
+    xclient.message_type = netWmState;
+    xclient.format = 32;
+    xclient.data.l[0] = state;
+    xclient.data.l[1] = netWmStateAbove;
+    xclient.data.l[2] = 0;
+    xclient.data.l[3] = 0;
+    xclient.data.l[4] = 0;
+
+    XSendEvent(xdisplay, DefaultRootWindow(xdisplay), false,
+               SubstructureRedirectMask | SubstructureNotifyMask,
+               (XEvent *)&xclient);
+
+    XFlush(xdisplay);
+
+    return true;
+  }
+
+  return false;
+}
