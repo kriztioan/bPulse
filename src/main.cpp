@@ -116,7 +116,8 @@ int main(int argc, char *argv[], char **envp) {
       atoi(smanager->GetOptionForKey("ypos").c_str()), background->width,
       background->height, ehandler, background, icon);
 
-  mwindow->SetAlwaysOnTop(atoi(smanager->GetOptionForKey("alwaysontop").c_str()));
+  mwindow->SetAlwaysOnTop(
+      atoi(smanager->GetOptionForKey("alwaysontop").c_str()));
 
   mwindow->SetOpacity(atof(tmanager->GetOptionForKey("opacity").c_str()));
 
@@ -218,10 +219,10 @@ WindowEvents EventHandler(WindowEvent *e) {
 
 int HandleCPU() {
 
-  static float cpu[3] = {0, 0, 0};
+  static float cpu[3] = {0.0f, 0.0f, 0.0f};
 
   float cpu_in[3] = {pmanager->cpu.sys, pmanager->cpu.user, pmanager->cpu.nice},
-        sum = 0;
+        sum = 0.0f, r1;
 
   for (int i = 0; i < 3; i++) {
 
@@ -230,18 +231,28 @@ int HandleCPU() {
     sum += cpu[i];
   }
 
-  if (sum > 0.0f)
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:14/07/68/ff");
+  if (sum > 0.0f) {
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:14/07/68/ff");
+
+    r1 = R1 * std::sqrt(sum);
+  }
 
   sum -= cpu[NICE];
+  if (sum > 0.0f) {
 
-  if (sum > 0.0f)
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:56/52/9e/ff");
+    r1 = R1 * std::sqrt(sum);
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:56/52/9e/ff");
+  }
 
   sum -= cpu[USER];
+  if (sum > 0.0f) {
 
-  if (sum > 0.0f)
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, R1 * sum, "rgba:af/ae/c4/ff");
+    r1 = R1 * std::sqrt(sum);
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:af/ae/c4/ff");
+  }
 
   return 0;
 }
