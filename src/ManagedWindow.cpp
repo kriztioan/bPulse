@@ -199,8 +199,8 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
   return 0;
 }
 
-int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
-                                   int angle1, int angle2) {
+int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
+                                    int angle1, int angle2) {
 
   int nxtriangles = ceil((angle2 - angle1) * radius2 / 360.);
 
@@ -284,6 +284,59 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
 
   XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
                             xtriangles, 2 * nxtriangles + 1);
+
+  return 0;
+}
+
+int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
+                                   int angle1, int angle2) {
+
+  int nxpoints = ceil((angle2 - angle1) * radius2 * M_PI / 180.0f);
+
+  if (nxpoints < 4)
+    return 0;
+
+  XPointFixed xpoints[nxpoints];
+
+  int nxtriangles = nxpoints - 3;
+
+  auto xrender = [&](int angle1, int angle2) {
+    double a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0;
+
+    int i = 0;
+    xpoints[i].x = XDoubleToFixed(cos(a1) * radius2 + x);
+    xpoints[i].y = XDoubleToFixed(-sin(a1) * radius2 + y);
+    ++i;
+    xpoints[i].x = XDoubleToFixed(cos(a1) * radius1 + x);
+    xpoints[i].y = XDoubleToFixed(-sin(a1) * radius1 + y);
+    ++i;
+    xpoints[i].x =
+        XDoubleToFixed(cos(a1 + (a2 - a1) / nxtriangles) * radius2 + x);
+    xpoints[i].y =
+        XDoubleToFixed(-sin(a1 + (a2 - a1) / nxtriangles) * radius2 + y);
+    ++i;
+
+    float radius = radius1;
+    for (; i < nxpoints - 1; i++) {
+      xpoints[i].x = XDoubleToFixed(
+          cos(a1 + (a2 - a1) * (i - 1) / nxtriangles) * radius + x);
+      xpoints[i].y = XDoubleToFixed(
+          -sin(a1 + (a2 - a1) * (i - 1) / nxtriangles) * radius + y);
+      radius = (i % 2 == 0) ? radius1 : radius2;
+    }
+
+    radius = (i % 2 == 0) ? radius2 : radius1;
+    xpoints[i].x = XDoubleToFixed(cos(a2) * radius + x);
+    xpoints[i].y = XDoubleToFixed(-sin(a2) * radius + y);
+
+    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
+                             xpoints, nxpoints);
+  };
+
+  xrender(angle1, angle2);
+
+  int delta = (angle2 - angle1) / nxpoints / 2;
+  xrender(angle1 + delta, angle2 - delta);
 
   return 0;
 }

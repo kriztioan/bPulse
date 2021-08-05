@@ -79,6 +79,9 @@ public:
   int xx, xy, xwidth, xheight;
 
 private:
+  int DrawRenderedArc0(int x, int y, int radius1, int radius2, int angle1,
+                      int angle2);
+
   int DrawRenderedArc(int x, int y, int radius1, int radius2, int angle1,
                       int angle2);
 
