@@ -56,6 +56,10 @@ ManagedWindow *mwindow = nullptr;
 
 int timeout;
 
+time_t t;
+
+struct tm *tm_s;
+
 std::string font;
 
 int main(int argc, char *argv[], char **envp) {
@@ -94,8 +98,7 @@ int main(int argc, char *argv[], char **envp) {
 
   pmanager->SetProcMask(ProcManager::Masks::CPU | ProcManager::Masks::Mem |
                         ProcManager::Masks::Disk | ProcManager::Masks::Eth |
-                        ProcManager::Masks::IO | ProcManager::Masks::Time |
-                        ProcManager::Masks::Users);
+                        ProcManager::Masks::IO | ProcManager::Masks::Users);
 
   std::function<int(void)> chandler = CallbackHandler;
 
@@ -158,16 +161,18 @@ int SignalHandler(int sig) {
 
 int CallbackHandler() {
 
-  static unsigned long timer = 0;
+  static unsigned long tick = 0;
 
-  amanager->SetTimeout(1000 / FRAME_RATE);
-
-  if (timer % (timeout / (1000 / FRAME_RATE)) == 0) {
+  if (tick % (timeout / (1000 / FRAME_RATE)) == 0) {
 
     pmanager->Probe();
   }
 
-  ++timer;
+  ++tick;
+
+  t = time(NULL);
+
+  tm_s = localtime(&t);
 
   HandleIO();
 
@@ -261,9 +266,9 @@ int HandleDate() {
 
   static char day[3], month[4];
 
-  sprintf(day, "%02d", pmanager->time.tm_mday);
+  sprintf(day, "%02d", tm_s->tm_mday);
 
-  strftime(month, 4, "%b", &(pmanager->time));
+  strftime(month, 4, "%b", tm_s);
 
   mwindow->DrawText(CEN_X + R2, CEN_Y, day, font.c_str(), 10,
                     "rgba:00/00/ff/ff");
@@ -278,38 +283,34 @@ int HandleTime() {
 
   mwindow->DrawLine(
       CEN_X, CEN_Y,
-      CEN_X + (0.75 * R3 *
-               cos(2. * M_PI + M_PI / 2. -
-                   2. * 2. * M_PI *
-                       (pmanager->time.tm_hour + pmanager->time.tm_min / 60.) /
-                       24.)),
-      CEN_Y - (0.75 * R3 *
-               sin(2. * M_PI + M_PI / 2. -
-                   2. * 2. * M_PI *
-                       (pmanager->time.tm_hour + pmanager->time.tm_min / 60.) /
-                       24.)),
+      CEN_X +
+          (0.75 * R3 *
+           cos(2. * M_PI + M_PI / 2. -
+               2. * 2. * M_PI * (tm_s->tm_hour + tm_s->tm_min / 60.) / 24.)),
+      CEN_Y -
+          (0.75 * R3 *
+           sin(2. * M_PI + M_PI / 2. -
+               2. * 2. * M_PI * (tm_s->tm_hour + tm_s->tm_min / 60.) / 24.)),
       3, "rgba:fc/ff/42/88");
 
-  mwindow->DrawLine(CEN_X, CEN_Y,
-                    CEN_X + (0.95 * R3 *
-                             cos(2. * M_PI + M_PI / 2. -
-                                 2. * M_PI * pmanager->time.tm_min / 60.)),
-                    CEN_Y - (0.95 * R3 *
-                             sin(2. * M_PI + M_PI / 2. -
-                                 2. * M_PI * pmanager->time.tm_min / 60.)),
-                    2, "rgba:fc/ff/42/88");
+  mwindow->DrawLine(
+      CEN_X, CEN_Y,
+      CEN_X + (0.95 * R3 *
+               cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
+      CEN_Y - (0.95 * R3 *
+               sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
+      2, "rgba:fc/ff/42/88");
 
-  mwindow->DrawLine(CEN_X - (R3 * 0.25 *
-                             cos(2. * M_PI + M_PI / 2. -
-                                 2. * M_PI * pmanager->time.tm_sec / 60.)),
-                    CEN_Y + (R3 * 0.25 *
-                             sin(2. * M_PI + M_PI / 2. -
-                                 2. * M_PI * pmanager->time.tm_sec / 60.)),
-                    CEN_X + (R3 * cos(2. * M_PI + M_PI / 2. -
-                                      2. * M_PI * pmanager->time.tm_sec / 60.)),
-                    CEN_Y - (R3 * sin(2. * M_PI + M_PI / 2. -
-                                      2. * M_PI * pmanager->time.tm_sec / 60.)),
-                    1, "rgba:ff/00/00/ff");
+  mwindow->DrawLine(
+      CEN_X - (R3 * 0.25 *
+               cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
+      CEN_Y + (R3 * 0.25 *
+               sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
+      CEN_X +
+          (R3 * cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
+      CEN_Y -
+          (R3 * sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
+      1, "rgba:ff/00/00/ff");
 
   return 0;
 }

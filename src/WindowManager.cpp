@@ -61,7 +61,8 @@ int WindowManager::EventHandler() {
 
   KeySym xkey;
 
-  static int x, y;
+  static int x, y, w = DisplayWidth(_xdisplay, DefaultScreen(_xdisplay)),
+                   h = DisplayHeight(_xdisplay, DefaultScreen(_xdisplay));
 
   while (XPending(_xdisplay) > 0) {
 
@@ -88,6 +89,22 @@ int WindowManager::EventHandler() {
           (*mwindow)->xx = (*mwindow)->xx + xevent.xmotion.x - x;
 
           (*mwindow)->xy = (*mwindow)->xy + xevent.xmotion.y - y;
+
+          if ((*mwindow)->xx < 0) {
+
+            (*mwindow)->xx = 0;
+          } else if ((*mwindow)->xx > w) {
+
+            (*mwindow)->xx = w;
+          }
+
+          if ((*mwindow)->xy < 0) {
+
+            (*mwindow)->xy = 0;
+          } else if ((*mwindow)->xy > h) {
+
+            (*mwindow)->xy = h;
+          }
 
           XMoveWindow(_xdisplay, (*mwindow)->xwindow, (*mwindow)->xx,
                       (*mwindow)->xy);

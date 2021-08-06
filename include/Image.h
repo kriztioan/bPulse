@@ -16,16 +16,15 @@
 
 class Image {
 
- public:
+public:
+  enum class Type { Unknown, PNG };
 
-  enum class Type {Unknown, PNG};
-  
   Image();
-  
+
   ~Image();
-  
+
   Image(const char *path);
-  
+
   bool fail();
 
   bool good();
@@ -44,23 +43,15 @@ class Image {
 
   unsigned char *data;
 
- private:
-
+private:
   std::string _path;
 
   Type _type;
 
   bool _fail;
-
 };
 
-inline bool Image::fail() {
+inline bool Image::fail() { return _fail; }
 
-  return _fail;
-}
-
-inline bool Image::good() {
-
-  return !_fail;
-}
+inline bool Image::good() { return !_fail; }
 #endif // End of IMAGE_H_

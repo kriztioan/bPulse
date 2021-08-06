@@ -9,109 +9,93 @@
 
 #include "ThemeManager.h"
 
-ThemeManager::ThemeManager() {
+ThemeManager::ThemeManager() { _init(0, NULL); }
 
-    _init(0, NULL);
-}
+ThemeManager::ThemeManager(int argc, char *argv[]) { _init(argc, argv); }
 
-ThemeManager::ThemeManager(int argc, char *argv[]) {
-    
-    _init(argc, argv);
-}
-
-int ThemeManager::_init(int argc, char *argv[]) {
-
-    return 0;
-}
+int ThemeManager::_init(int argc, char *argv[]) { return 0; }
 
 int ThemeManager::LoadThemeFromFile(const char *path) {
-    
-    _ThemeFilePath = std::string(path);
-    
-    std::string key, value, *ptr;
-    
-	std::ifstream ifstr(_ThemeFilePath.c_str(), std::ios::in);
 
-	if(ifstr.fail()) {
+  _ThemeFilePath = std::string(path);
 
-        return 1;
+  std::string key, value, *ptr;
+
+  std::ifstream ifstr(_ThemeFilePath.c_str(), std::ios::in);
+
+  if (ifstr.fail()) {
+
+    return 1;
+  }
+
+  bool quotes = false;
+
+  char character;
+
+  while (ifstr.get(character).good()) {
+
+    if (character == '#') {
+
+      while (ifstr.get(character).good()) {
+
+        if (character == '\n') {
+
+          break;
+        }
+      }
+    } else if (character == '$') {
+
+      key.clear();
+
+      ptr = &key;
+
+      while (ifstr.get(character).good()) {
+
+        if (character == '\n') {
+
+          _Options.insert(std::make_pair(key, value));
+
+          break;
+        } else if (character == '\\') {
+
+          while (ifstr.get(character).good()) {
+
+            if (character == '\n') {
+
+              break;
+            }
+          }
+        } else if (character == '=' && !quotes) {
+
+          value.clear();
+
+          ptr = &value;
+        } else if (character == '\"') {
+
+          quotes = !quotes;
+        } else if (character != ' ' && character != '\t') {
+
+          *ptr += character;
+        }
+      }
     }
-	
-    bool quotes = false;
-    
-	char character;
-    
-    while(ifstr.get(character).good()) {
+  }
 
-		if(character == '#') {
+  ifstr.close();
 
-			while(ifstr.get(character).good()) {
-
-				if(character == '\n') {
-
-					break;
-                }
-			}
-		}
-		else if(character == '$') {
-
-            key.clear();
-            
-            ptr = &key;
-            
-			while(ifstr.get(character).good()) {
-
-				if(character == '\n') {
-
-                  _Options.insert(std::make_pair(key, value));
-                
-                   break;
-                }
-                else if(character == '\\') {
-
-					while(ifstr.get(character).good()) {
-
-						if(character == '\n') {
-
-							break;
-                        }
-                    }
-				}
-                else if(character == '=' && !quotes) {
-                    
-                    value.clear();
-                    
-                    ptr = &value;
-                }
-                else if(character == '\"') {
-                    
-                    quotes = !quotes;
-                }
-				else if(character != ' ' && character != '\t') {
-
-                    *ptr += character;
-                }
-			}
-		}
-	}
-
-	ifstr.close();
-    
-    return 0;
+  return 0;
 }
 
 std::string ThemeManager::GetOptionForKey(const char *key) {
-    
-    std::map<std::string, std::string>::iterator pair;
-    
-    pair = _Options.find(std::string(key));
-    
-    if(pair != _Options.end()) {
 
-        return pair->second;
-    }
-    
-    return std::string("");
+  std::map<std::string, std::string>::iterator pair;
+
+  pair = _Options.find(std::string(key));
+
+  if (pair != _Options.end()) {
+
+    return pair->second;
+  }
+
+  return std::string("");
 }
-
-

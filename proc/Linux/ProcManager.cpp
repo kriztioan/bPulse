@@ -39,8 +39,6 @@ int ProcManager::_init(int argc, char *argv[]) {
 }
 
 int ProcManager::Probe() {
-   
-  clock_gettime(CLOCK_MONOTONIC, &_now);
 
   if(_mask & Masks::CPU) {
 
@@ -159,12 +157,6 @@ int ProcManager::Probe() {
         
       _host += std::string();
     }
-  }
-    
-  if(_mask & Masks::Time) {
-
-    time_t tt = std::time(nullptr);
-    localtime_r(&tt, &time);
   }
 
   if(_mask & Masks::Alarm) {

@@ -84,10 +84,10 @@ void ApplicationManager::SignalHandler(int sig) {
 
 int ApplicationManager::RunLoop() {
 
-  struct timeval timeouttest;
+  struct timeval timeouttest, t0, t1, dt;
 
   timeouttest = _timeout;
-  
+
   fd_set readfds, testfds;
 
   int maxfd = -1;
@@ -142,6 +142,11 @@ int ApplicationManager::RunLoop() {
       break;
     }
 
+    if (gettimeofday(&t0, NULL) == -1) {
+
+      break;
+    }
+
     if ((ret = select(maxfd + 1, &testfds, nullptr, nullptr, &timeouttest)) <
         0) {
 
@@ -153,16 +158,34 @@ int ApplicationManager::RunLoop() {
       break;
     }
 
-    for (std::vector<std::pair<int, std::function<int(void)>>>::iterator
-             eventhandler = _EventHandlers.begin();
-         eventhandler != _EventHandlers.end(); ++eventhandler) {
+    if (ret > 0) {
 
-      if (FD_ISSET(eventhandler->first, &testfds)) {
+      for (std::vector<std::pair<int, std::function<int(void)>>>::iterator
+               eventhandler = _EventHandlers.begin();
+           eventhandler != _EventHandlers.end(); ++eventhandler) {
 
-        if ((ret = eventhandler->second()) != 0) {
+        if (FD_ISSET(eventhandler->first, &testfds)) {
 
-          break;
+          if ((ret = eventhandler->second()) != 0) {
+
+            break;
+          }
         }
+      }
+
+      if (gettimeofday(&t1, NULL) == -1) {
+
+        break;
+      }
+
+      timersub(&t1, &t0, &dt);
+
+      if (timercmp(&dt, &_timeout, <)) {
+
+        timersub(&_timeout, &dt, &timeouttest);
+      } else {
+
+        ret = 0;
       }
     }
 
@@ -177,9 +200,16 @@ int ApplicationManager::RunLoop() {
           break;
         }
       }
-   }
 
-    timeouttest = _timeout;
+      if (gettimeofday(&t1, NULL) == -1) {
+
+        break;
+      }
+
+      timersub(&t1, &t0, &dt);
+
+      timeouttest = _timeout;
+    }
 
     testfds = readfds;
   }

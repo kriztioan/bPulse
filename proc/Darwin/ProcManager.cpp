@@ -34,8 +34,6 @@ int ProcManager::_init(int argc, char *argv[]) {
 
 int ProcManager::Probe() {
 
-  ftime(&_now);
-
   if (_mask & Masks::CPU) {
 
     processor_cpu_load_info_t cpu_info;
@@ -262,11 +260,6 @@ int ProcManager::Probe() {
 
       _host += std::string();
     }
-  }
-
-  if (_mask & Masks::Time) {
-
-    localtime_r(&(_now.time), &time);
   }
 
   if (_mask & Masks::Alarm) {

@@ -9,8 +9,8 @@
 
 #ifndef WINDOWEVENTS_H_
 #define WINDOWEVENTS_H_
-    
-enum class WindowEvents {Zero = 0, Ignore = 1, Move = 2, Destroy = 3};
+
+enum class WindowEvents { Zero = 0, Ignore = 1, Move = 2, Destroy = 3 };
 
 typedef struct {
   WindowEvents type;
@@ -18,4 +18,3 @@ typedef struct {
   int y;
 } WindowEvent;
 #endif // End of WINDOWEVENTS_H_
-
