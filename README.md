@@ -4,6 +4,8 @@
 
 Running `bPulse` on `MaOS` requires that the [XQuartz](https://www.xquartz.org) `X11` window manager is installed.
 
+![bPulse in Action](bPulse.png "bPulse in Action")
+
 ## Usage
 
 `bPulse`  is compiled with:
