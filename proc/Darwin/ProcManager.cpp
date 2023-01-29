@@ -126,9 +126,7 @@ int ProcManager::Probe() {
 
   if (_mask & Masks::IO) {
 
-    mach_port_t master_port;
-
-    IOMasterPort(bootstrap_port, &master_port);
+    mach_port_t master_port = kIOMainPortDefault;
 
     CFMutableDictionaryRef match = IOServiceMatching("IOMedia");
 
@@ -140,10 +138,6 @@ int ProcManager::Probe() {
         IOServiceGetMatchingServices(master_port, match, &drive_list);
 
     if (status == KERN_SUCCESS) {
-
-      mach_port_t master_port;
-
-      IOMasterPort(bootstrap_port, &master_port);
 
       CFMutableDictionaryRef match = IOServiceMatching("IOMedia");
 

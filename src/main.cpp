@@ -266,7 +266,7 @@ int HandleDate() {
 
   static char day[3], month[4];
 
-  sprintf(day, "%02d", tm_s->tm_mday);
+  snprintf(day, 3, "%02d", tm_s->tm_mday);
 
   strftime(month, 4, "%b", tm_s);
 
