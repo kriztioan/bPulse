@@ -46,6 +46,10 @@
 #include <IOKit/storage/IOBlockStorageDriver.h>
 #include <IOKit/storage/IOMedia.h>
 
+#if (MAC_OS_X_VERSION_MAX_ALLOWED < 120000)
+#define kIOMainPortDefault kIOMasterPortDefault
+#endif
+
 class ProcManager {
 
 public:

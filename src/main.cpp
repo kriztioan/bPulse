@@ -227,7 +227,7 @@ int HandleCPU() {
   static float cpu[3] = {0.0f, 0.0f, 0.0f};
 
   float cpu_in[3] = {pmanager->cpu.sys, pmanager->cpu.user, pmanager->cpu.nice},
-        sum = 0.0f, r1;
+        sum = 0.0f, r1 = 0.0;
 
   for (int i = 0; i < 3; i++) {
 
