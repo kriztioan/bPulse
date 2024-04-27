@@ -78,7 +78,15 @@ public:
 
   int xx, xy, xwidth, xheight;
 
+  void Lock() { _locked = true; }
+
+  void Unlock() { _locked = false; }
+
+  bool IsLocked() { return _locked; }
+
 private:
+  bool _locked = false;
+
   int DrawRenderedArc0(int x, int y, int radius1, int radius2, int angle1,
                        int angle2);
 

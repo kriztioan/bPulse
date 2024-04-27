@@ -66,7 +66,7 @@ int WindowManager::EventHandler() {
 
   while (XPending(_xdisplay) > 0) {
 
-    XNextEvent(_xdisplay, &xevent); // XNextEvent Flushes!
+    XNextEvent(_xdisplay, &xevent); // XNextEvent Flushes if empty!
 
     std::list<ManagedWindow *>::iterator mwindow = _mwindows.begin();
 
@@ -91,19 +91,15 @@ int WindowManager::EventHandler() {
           (*mwindow)->xy = (*mwindow)->xy + xevent.xmotion.y - y;
 
           if ((*mwindow)->xx < 0) {
-
             (*mwindow)->xx = 0;
-          } else if ((*mwindow)->xx > w) {
-
-            (*mwindow)->xx = w;
+          } else if ((*mwindow)->xx > (w - (*mwindow)->xwidth)) {
+            (*mwindow)->xx = w - (*mwindow)->xwidth;
           }
 
           if ((*mwindow)->xy < 0) {
-
             (*mwindow)->xy = 0;
-          } else if ((*mwindow)->xy > h) {
-
-            (*mwindow)->xy = h;
+          } else if ((*mwindow)->xy > (h - (*mwindow)->xheight)) {
+            (*mwindow)->xy = (h - (*mwindow)->xheight);
           }
 
           XMoveWindow(_xdisplay, (*mwindow)->xwindow, (*mwindow)->xx,
@@ -117,13 +113,31 @@ int WindowManager::EventHandler() {
 
         case ButtonPress:
 
-          x = xevent.xbutton.x;
+          if (xevent.xbutton.button == Button1) {
 
-          y = xevent.xbutton.y;
+            (*mwindow)->Lock();
 
-          ++mwindow;
+            x = xevent.xbutton.x;
 
-          continue;
+            y = xevent.xbutton.y;
+
+            ++mwindow;
+
+            continue;
+          }
+
+          break;
+
+        case ButtonRelease:
+
+          if (xevent.xbutton.button == Button1) {
+
+            (*mwindow)->Unlock();
+
+            ++mwindow;
+
+            continue;
+          }
 
           break;
 
@@ -134,7 +148,6 @@ int WindowManager::EventHandler() {
           _event.y = xevent.xconfigure.y;
 
           if ((*mwindow)->EventHandler) {
-
             _event.type = WindowEvents::Move;
 
             if ((*mwindow)->EventHandler(&_event) != WindowEvents::Zero) {
@@ -164,7 +177,6 @@ int WindowManager::EventHandler() {
           Atom wmProtocols = XInternAtom(_xdisplay, "WM_PROTOCOLS", false);
 
           if (xevent.xclient.message_type == wmProtocols) {
-
             Atom wmDeleteWindow =
                 XInternAtom(_xdisplay, "WM_DELETE_WINDOW", false);
 
@@ -275,7 +287,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   xwindowattributes.event_mask = StructureNotifyMask | KeyPressMask |
                                  ExposureMask | ButtonPressMask |
-                                 Button1MotionMask;
+                                 ButtonReleaseMask | Button1MotionMask;
 
   xwindowattributes.do_not_propagate_mask = false;
 
@@ -471,7 +483,6 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
     XNextEvent(_xdisplay, &xevent);
 
     if (xevent.type == MapNotify) {
-
       break;
     }
   }

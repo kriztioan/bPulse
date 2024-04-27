@@ -134,6 +134,8 @@ int main(int argc, char *argv[], char **envp) {
 
   amanager->SetTimeout(1000 / FRAME_RATE);
 
+  CallbackHandler();
+
   amanager->RunLoop();
 
   smanager->WriteSettingsToFile();
@@ -163,12 +165,17 @@ int CallbackHandler() {
 
   static unsigned long tick = 0;
 
-  if (tick % (timeout / (1000 / FRAME_RATE)) == 0) {
+  if (mwindow->IsLocked()) {
+
+    ++tick;
+
+    return 0;
+  }
+
+  if (tick++ % (timeout / (1000 / FRAME_RATE)) == 0) {
 
     pmanager->Probe();
   }
-
-  ++tick;
 
   t = time(NULL);
 

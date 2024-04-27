@@ -208,7 +208,14 @@ int ApplicationManager::RunLoop() {
 
       timersub(&t1, &t0, &dt);
 
-      timeouttest = _timeout;
+      if (timercmp(&dt, &_timeout, <)) {
+
+        timersub(&_timeout, &dt, &timeouttest);
+      }
+      else {
+
+        timerclear(&timeouttest);
+      }
     }
 
     testfds = readfds;
