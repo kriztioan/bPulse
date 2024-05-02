@@ -24,7 +24,13 @@ ManagedWindow::~ManagedWindow() {
 
   if (_xfont) {
 
+    delete _xglyphinfo;
+
+    _xglyphinfo = nullptr;
+
     XRenderFreeGlyphSet(xdisplay, _xfont);
+
+    _xfont = None;
   }
 
   XFreeGC(xdisplay, xmaskgc);
@@ -107,9 +113,15 @@ int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
 
 int ManagedWindow::SetFont(std::string font, int size) {
 
-  if(_xfont) {
+  if (_xfont) {
 
-    return 1;
+    delete _xglyphinfo;
+
+    _xglyphinfo = nullptr;
+
+    XRenderFreeGlyphSet(xdisplay, _xfont);
+
+    _xfont = None;
   }
 
   FT_Library library;
@@ -127,15 +139,16 @@ int ManagedWindow::SetFont(std::string font, int size) {
   }
 
   if (FT_Set_Pixel_Sizes(face, 0, size) != 0) {
+
     return 1;
   }
 
   _xfont = XRenderCreateGlyphSet(
       xdisplay, XRenderFindStandardFormat(xdisplay, PictStandardA8));
 
-  // unsigned int xpixels = 0, ypixels = 0;
+  _xglyphinfo = new XGlyphInfo['~' - ' '];
 
-  for (char ch = '0'; ch <= '~'; ch++) {
+  for (char ch = ' '; ch <= '~'; ch++) {
 
     FT_UInt g_index = FT_Get_Char_Index(face, ch);
 
@@ -146,40 +159,33 @@ int ManagedWindow::SetFont(std::string font, int size) {
 
     FT_Bitmap *bitmap = &(face->glyph->bitmap);
 
-    Glyph g_id;
+    Glyph g_id = ch;
 
-    XGlyphInfo g_info;
+    _xglyphinfo[ch - ' '].x = -face->glyph->bitmap_left;
 
-    g_info.x = -face->glyph->bitmap_left;
+    _xglyphinfo[ch - ' '].y = face->glyph->bitmap_top;
 
-    g_info.y = face->glyph->bitmap_top;
+    _xglyphinfo[ch - ' '].width = bitmap->width;
 
-    g_info.width = bitmap->width;
+    _xglyphinfo[ch - ' '].height = bitmap->rows;
 
-    g_info.height = bitmap->rows;
+    _xglyphinfo[ch - ' '].xOff = face->glyph->advance.x / 64;
 
-    g_info.xOff = face->glyph->advance.x / 64;
+    _xglyphinfo[ch - ' '].yOff = face->glyph->advance.y / 64;
 
-    g_info.yOff = face->glyph->advance.y / 64;
+    int stride = (_xglyphinfo[ch - ' '].width + 3) & ~3;
 
-    g_id = ch;
+    char map[stride * _xglyphinfo[ch - ' '].height];
 
-    int stride = (g_info.width + 3) & ~3;
+    for (int row = 0; row < _xglyphinfo[ch - ' '].height; row++) {
 
-    char map[stride * g_info.height];
-
-    for (int row = 0; row < g_info.height; row++) {
-
-      memcpy(map + row * stride, bitmap->buffer + row * g_info.width,
-             g_info.width);
+      memcpy(map + row * stride,
+             bitmap->buffer + row * _xglyphinfo[ch - ' '].width,
+             _xglyphinfo[ch - ' '].width);
     }
 
-    XRenderAddGlyphs(xdisplay, _xfont, &g_id, &g_info, 1, map,
-                     stride * g_info.height);
-
-    // xpixels += bitmap->width;
-
-    // ypixels = std::max(ypixels, bitmap->rows);
+    XRenderAddGlyphs(xdisplay, _xfont, &g_id, &(_xglyphinfo[ch - ' ']), 1, map,
+                     stride * _xglyphinfo[ch - ' '].height);
   }
 
   FT_Done_Face(face);
@@ -190,12 +196,22 @@ int ManagedWindow::SetFont(std::string font, int size) {
 int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
                             int align) {
 
-  if(!_xfont) {
+  if (!_xfont) {
 
     return 1;
   }
 
-  /*  switch (align) {
+  unsigned int xpixels = 0, ypixels = 0;
+
+  for (std::string::iterator it = text.begin(); it != text.end(); it++) {
+
+    xpixels += _xglyphinfo[*it - ' '].width;
+
+    ypixels = std::max(
+        ypixels, static_cast<unsigned int>(_xglyphinfo[*it - ' '].height));
+  }
+
+  switch (align) {
   case TEXT::ALIGN::LEFT:
     break;
   case TEXT::ALIGN::CENTER:
@@ -205,7 +221,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
   case TEXT::ALIGN::RIGHT:
     x -= xpixels;
     break;
-  }; */
+  };
 
   XRenderColor xrendercolor;
 
@@ -213,8 +229,8 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, 0, _xfont, 0, 0,
-                          x, y, text.c_str(), text.length());
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, 0, _xfont, 0,
+                          0, x, y, text.c_str(), text.length());
 
   return 0;
 }
