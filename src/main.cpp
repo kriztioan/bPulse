@@ -60,8 +60,6 @@ time_t t;
 
 struct tm *tm_s;
 
-std::string font;
-
 int main(int argc, char *argv[], char **envp) {
 
   smanager = new SettingsManager(argc, argv);
@@ -119,6 +117,8 @@ int main(int argc, char *argv[], char **envp) {
       atoi(smanager->GetOptionForKey("ypos").c_str()), background->width,
       background->height, ehandler, background, icon);
 
+  mwindow->SetFont(tmanager->GetOptionForKey("font"), 10);
+
   mwindow->SetAlwaysOnTop(
       atoi(smanager->GetOptionForKey("alwaysontop").c_str()));
 
@@ -129,8 +129,6 @@ int main(int argc, char *argv[], char **envp) {
   delete icon;
 
   timeout = atoi(smanager->GetOptionForKey("timeout").c_str());
-
-  font = tmanager->GetOptionForKey("font");
 
   amanager->SetTimeout(1000 / FRAME_RATE);
 
@@ -277,11 +275,9 @@ int HandleDate() {
 
   strftime(month, 4, "%b", tm_s);
 
-  mwindow->DrawText(CEN_X + R2, CEN_Y, day, font.c_str(), 10,
-                    "rgba:00/00/ff/ff");
+  mwindow->DrawText(CEN_X + R2, CEN_Y, day, "rgba:00/00/ff/ff");
 
-  mwindow->DrawText(CEN_X - R3, CEN_Y, month, font.c_str(), 10,
-                    "rgba:00/00/ff/ff");
+  mwindow->DrawText(CEN_X - R3, CEN_Y, month, "rgba:00/00/ff/ff");
 
   return 0;
 }
@@ -454,13 +450,11 @@ int HandleDisk() {
 int HandleUser() {
 
   if (!pmanager->users.front().empty()) {
-    mwindow->DrawText(CEN_X, CEN_Y - 4, pmanager->users.front().c_str(),
-                      font.c_str(), 10, "rgba:dd/dd/dd/ff",
-                      TEXT::ALIGN::CENTER);
+    mwindow->DrawText(CEN_X - 21, CEN_Y - 8, pmanager->users.front(),
+                      "rgba:dd/dd/dd/ff", TEXT::ALIGN::CENTER);
 
-    mwindow->DrawText(CEN_X, CEN_Y + 24,
-                      std::to_string(pmanager->users.size()).c_str(),
-                      font.c_str(), 10, "rgba:dd/dd/dd/ff", TEXT::ALIGN::LEFT);
+    mwindow->DrawText(CEN_X, CEN_Y + 24, std::to_string(pmanager->users.size()),
+                      "rgba:dd/dd/dd/ff", TEXT::ALIGN::LEFT);
   }
 
   return 0;

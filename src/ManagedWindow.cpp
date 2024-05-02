@@ -22,6 +22,11 @@ ManagedWindow::~ManagedWindow() {
 
   XRenderFreePicture(xdisplay, xcanvas);
 
+  if (_xfont) {
+
+    XRenderFreeGlyphSet(xdisplay, _xfont);
+  }
+
   XFreeGC(xdisplay, xmaskgc);
 
   XFreePixmap(xdisplay, xmask);
@@ -100,8 +105,12 @@ int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
   return DrawRenderedLine(x1, y1, x2, y2, width);
 }
 
-int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
-                            int size, std::string color, int align) {
+int ManagedWindow::SetFont(std::string font, int size) {
+
+  if(_xfont) {
+
+    return 1;
+  }
 
   FT_Library library;
 
@@ -121,14 +130,14 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
     return 1;
   }
 
-  GlyphSet xfont = XRenderCreateGlyphSet(
+  _xfont = XRenderCreateGlyphSet(
       xdisplay, XRenderFindStandardFormat(xdisplay, PictStandardA8));
 
-  unsigned int xpixels = 0, ypixels = 0;
+  // unsigned int xpixels = 0, ypixels = 0;
 
-  for (std::string::iterator ch = text.begin(); ch != text.end(); ++ch) {
+  for (char ch = '0'; ch <= '~'; ch++) {
 
-    FT_UInt g_index = FT_Get_Char_Index(face, *ch);
+    FT_UInt g_index = FT_Get_Char_Index(face, ch);
 
     if (FT_Load_Glyph(face, g_index, FT_LOAD_RENDER) != 0) {
 
@@ -153,7 +162,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
 
     g_info.yOff = face->glyph->advance.y / 64;
 
-    g_id = *ch;
+    g_id = ch;
 
     int stride = (g_info.width + 3) & ~3;
 
@@ -165,15 +174,28 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
              g_info.width);
     }
 
-    XRenderAddGlyphs(xdisplay, xfont, &g_id, &g_info, 1, map,
+    XRenderAddGlyphs(xdisplay, _xfont, &g_id, &g_info, 1, map,
                      stride * g_info.height);
 
-    xpixels += bitmap->width;
+    // xpixels += bitmap->width;
 
-    ypixels = std::max(ypixels, bitmap->rows);
+    // ypixels = std::max(ypixels, bitmap->rows);
   }
 
-  switch (align) {
+  FT_Done_Face(face);
+
+  return 0;
+}
+
+int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
+                            int align) {
+
+  if(!_xfont) {
+
+    return 1;
+  }
+
+  /*  switch (align) {
   case TEXT::ALIGN::LEFT:
     break;
   case TEXT::ALIGN::CENTER:
@@ -183,9 +205,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
   case TEXT::ALIGN::RIGHT:
     x -= xpixels;
     break;
-  };
-
-  FT_Done_Face(face);
+  }; */
 
   XRenderColor xrendercolor;
 
@@ -193,7 +213,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string font,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, 0, xfont, 0, 0,
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, 0, _xfont, 0, 0,
                           x, y, text.c_str(), text.length());
 
   return 0;
@@ -215,43 +235,43 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
 
   int i = 0;
 
-  xtriangles[i].p1.x = XDoubleToFixed(cos(a1) * radius1 + x);
-  xtriangles[i].p2.x = XDoubleToFixed(cos(a1) * radius2 + x);
+  xtriangles[i].p1.x = XDoubleToFixed(cosf(a1) * radius1 + x);
+  xtriangles[i].p2.x = XDoubleToFixed(cosf(a1) * radius2 + x);
   xtriangles[i].p3.x =
-      XDoubleToFixed(cos(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + x);
+      XDoubleToFixed(cosf(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + x);
 
-  xtriangles[i].p1.y = XDoubleToFixed(-sin(a1) * radius1 + y);
-  xtriangles[i].p2.y = XDoubleToFixed(-sin(a1) * radius2 + y);
+  xtriangles[i].p1.y = XDoubleToFixed(-sinf(a1) * radius1 + y);
+  xtriangles[i].p2.y = XDoubleToFixed(-sinf(a1) * radius2 + y);
   xtriangles[i].p3.y =
-      XDoubleToFixed(-sin(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
+      XDoubleToFixed(-sinf(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
 
   ++i;
 
   for (int j = 0; j < nxtriangles; j++) {
 
     xtriangles[i].p1.x =
-        XDoubleToFixed(cos(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + x);
+        XDoubleToFixed(cosf(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + x);
     xtriangles[i].p2.x = XDoubleToFixed(
-        cos(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + x);
+        cosf(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + x);
     xtriangles[i].p3.x = XDoubleToFixed(
-        cos(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + x);
+        cosf(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + x);
 
     xtriangles[i].p1.y =
-        XDoubleToFixed(-sin(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + y);
+        XDoubleToFixed(-sinf(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + y);
     xtriangles[i].p2.y = XDoubleToFixed(
-        -sin(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + y);
+        -sinf(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + y);
     xtriangles[i].p3.y = XDoubleToFixed(
-        -sin(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + y);
+        -sinf(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + y);
 
     xtriangles[i + 1].p1.x = xtriangles[i].p2.x;
     xtriangles[i + 1].p2.x = xtriangles[i].p3.x;
     xtriangles[i + 1].p3.x = XDoubleToFixed(
-        cos(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + x);
+        cosf(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + x);
 
     xtriangles[i + 1].p1.y = xtriangles[i].p2.y;
     xtriangles[i + 1].p2.y = xtriangles[i].p3.y;
     xtriangles[i + 1].p3.y = XDoubleToFixed(
-        -sin(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + y);
+        -sinf(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + y);
 
     /*xtriangles[i+2].p1.x = xtriangles[i].p1.x;
     xtriangles[i+2].p2.x = xtriangles[i].p2.x;
@@ -272,15 +292,15 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
     i += 2;
   }
 
-  xtriangles[i - 1].p1.x = XDoubleToFixed(cos(a2) * radius1 + x);
-  xtriangles[i - 1].p2.x = XDoubleToFixed(cos(a2) * radius2 + x);
+  xtriangles[i - 1].p1.x = XDoubleToFixed(cosf(a2) * radius1 + x);
+  xtriangles[i - 1].p2.x = XDoubleToFixed(cosf(a2) * radius2 + x);
   xtriangles[i - 1].p3.x =
-      XDoubleToFixed(cos(a2 - 0.5 * (a2 - a1) / nxtriangles) * radius2 + x);
+      XDoubleToFixed(cosf(a2 - 0.5 * (a2 - a1) / nxtriangles) * radius2 + x);
 
-  xtriangles[i - 1].p1.y = XDoubleToFixed(-sin(a2) * radius1 + y);
-  xtriangles[i - 1].p2.y = XDoubleToFixed(-sin(a2) * radius2 + y);
+  xtriangles[i - 1].p1.y = XDoubleToFixed(-sinf(a2) * radius1 + y);
+  xtriangles[i - 1].p2.y = XDoubleToFixed(-sinf(a2) * radius2 + y);
   xtriangles[i - 1].p3.y =
-      XDoubleToFixed(-sin(a2 - (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
+      XDoubleToFixed(-sinf(a2 - (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
 
   XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
                             xtriangles, 2 * nxtriangles + 1);
@@ -294,40 +314,37 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
   int nxpoints = ceil((angle2 - angle1) * radius2 * M_PI / 180.0f);
 
   if (nxpoints < 4)
-    return 0;
+    nxpoints = 4;
 
   XPointFixed xpoints[nxpoints];
 
   int nxtriangles = nxpoints - 3;
 
   auto xrender = [&](int angle1, int angle2) {
-    double a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0;
+    float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
+          da = (a2 - a1) / nxtriangles, cosfa1 = cosf(a1), sinfa1 = -sinf(a1);
 
     int i = 0;
-    xpoints[i].x = XDoubleToFixed(cos(a1) * radius2 + x);
-    xpoints[i].y = XDoubleToFixed(-sin(a1) * radius2 + y);
-    ++i;
-    xpoints[i].x = XDoubleToFixed(cos(a1) * radius1 + x);
-    xpoints[i].y = XDoubleToFixed(-sin(a1) * radius1 + y);
-    ++i;
-    xpoints[i].x =
-        XDoubleToFixed(cos(a1 + (a2 - a1) / nxtriangles) * radius2 + x);
-    xpoints[i].y =
-        XDoubleToFixed(-sin(a1 + (a2 - a1) / nxtriangles) * radius2 + y);
-    ++i;
+
+    xpoints[i].x = XDoubleToFixed(cosfa1 * radius2 + x);
+    xpoints[i++].y = XDoubleToFixed(sinfa1 * radius2 + y);
+
+    xpoints[i].x = XDoubleToFixed(cosfa1 * radius1 + x);
+    xpoints[i++].y = XDoubleToFixed(sinfa1 * radius1 + y);
+
+    xpoints[i].x = XDoubleToFixed(cosf(a1 + da) * radius2 + x);
+    xpoints[i++].y = XDoubleToFixed(-sinf(a1 + da) * radius2 + y);
 
     float radius = radius1;
     for (; i < nxpoints - 1; i++) {
-      xpoints[i].x = XDoubleToFixed(
-          cos(a1 + (a2 - a1) * (i - 1) / nxtriangles) * radius + x);
-      xpoints[i].y = XDoubleToFixed(
-          -sin(a1 + (a2 - a1) * (i - 1) / nxtriangles) * radius + y);
+      xpoints[i].x = XDoubleToFixed(cosf(a1 + da * (i - 1)) * radius + x);
+      xpoints[i].y = XDoubleToFixed(-sinf(a1 + da * (i - 1)) * radius + y);
       radius = (i % 2 == 0) ? radius1 : radius2;
     }
 
     radius = (i % 2 == 0) ? radius2 : radius1;
-    xpoints[i].x = XDoubleToFixed(cos(a2) * radius + x);
-    xpoints[i].y = XDoubleToFixed(-sin(a2) * radius + y);
+    xpoints[i].x = XDoubleToFixed(cosf(a2) * radius + x);
+    xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius + y);
 
     XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
                              xpoints, nxpoints);
@@ -348,24 +365,24 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
   double angle = atan2(y2 - y1, x2 - x1),
          radius = sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
 
-  xtriangle[0].p1.x = XDoubleToFixed(x1 - width * sin(angle) / 2);
-  xtriangle[0].p1.y = XDoubleToFixed(y1 + width * cos(angle) / 2);
+  xtriangle[0].p1.x = XDoubleToFixed(x1 - width * sinf(angle) / 2);
+  xtriangle[0].p1.y = XDoubleToFixed(y1 + width * cosf(angle) / 2);
 
-  xtriangle[0].p2.x = XDoubleToFixed(x1 + width * sin(angle) / 2);
-  xtriangle[0].p2.y = XDoubleToFixed(y1 - width * cos(angle) / 2);
+  xtriangle[0].p2.x = XDoubleToFixed(x1 + width * sinf(angle) / 2);
+  xtriangle[0].p2.y = XDoubleToFixed(y1 - width * cosf(angle) / 2);
 
   xtriangle[0].p3.x =
-      XDoubleToFixed(x1 + radius * cos(angle) - width * sin(angle) / 2);
+      XDoubleToFixed(x1 + radius * cosf(angle) - width * sinf(angle) / 2);
   xtriangle[0].p3.y =
-      XDoubleToFixed(y1 + radius * sin(angle) + width * cos(angle) / 2);
+      XDoubleToFixed(y1 + radius * sinf(angle) + width * cosf(angle) / 2);
 
   xtriangle[1].p1.x = xtriangle[0].p3.x;
   xtriangle[1].p1.y = xtriangle[0].p3.y;
 
   xtriangle[1].p2.x =
-      XDoubleToFixed(x1 + radius * cos(angle) + width * sin(angle) / 2);
+      XDoubleToFixed(x1 + radius * cosf(angle) + width * sinf(angle) / 2);
   xtriangle[1].p2.y =
-      XDoubleToFixed(y1 + radius * sin(angle) - width * cos(angle) / 2);
+      XDoubleToFixed(y1 + radius * sinf(angle) - width * cosf(angle) / 2);
 
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;

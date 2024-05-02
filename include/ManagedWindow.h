@@ -45,12 +45,13 @@ public:
 
   int DrawLine(int x1, int y1, int x2, int y2, int width, std::string color);
 
-  int DrawText(int x1, int y1, std::string text, std::string font, int size,
-               std::string color, int align = TEXT::ALIGN::LEFT);
+  int DrawText(int x1, int y1, std::string text, std::string color, int align = TEXT::ALIGN::LEFT);
 
   int SetOpacity(float opacity);
 
   bool SetAlwaysOnTop(bool state);
+
+  int SetFont(std::string font, int size);
 
   int Sync();
 
@@ -85,6 +86,8 @@ public:
   bool IsLocked() { return _locked; }
 
 private:
+  GlyphSet _xfont = 0;
+
   bool _locked = false;
 
   int DrawRenderedArc0(int x, int y, int radius1, int radius2, int angle1,
