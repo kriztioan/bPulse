@@ -369,6 +369,7 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
   xrender(angle1, angle2);
 
   int delta = (angle2 - angle1) / nxpoints / 2;
+
   xrender(angle1 + delta, angle2 - delta);
 
   return 0;
@@ -378,27 +379,24 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
 
   XTriangle xtriangle[2];
 
-  double angle = atan2(y2 - y1, x2 - x1),
-         radius = sqrt((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1));
+  float angle = atan2f(y2 - y1, x2 - x1),
+        radius = sqrtf((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1)),
+        sina = sinf(angle) / 2.0, cosa = cosf(angle) / 2.0;
 
-  xtriangle[0].p1.x = XDoubleToFixed(x1 - width * sinf(angle) / 2);
-  xtriangle[0].p1.y = XDoubleToFixed(y1 + width * cosf(angle) / 2);
+  xtriangle[0].p1.x = XDoubleToFixed(x1 - width * sina);
+  xtriangle[0].p1.y = XDoubleToFixed(y1 + width * cosa);
 
-  xtriangle[0].p2.x = XDoubleToFixed(x1 + width * sinf(angle) / 2);
-  xtriangle[0].p2.y = XDoubleToFixed(y1 - width * cosf(angle) / 2);
+  xtriangle[0].p2.x = XDoubleToFixed(x1 + width * sina);
+  xtriangle[0].p2.y = XDoubleToFixed(y1 - width * cosa);
 
-  xtriangle[0].p3.x =
-      XDoubleToFixed(x1 + radius * cosf(angle) - width * sinf(angle) / 2);
-  xtriangle[0].p3.y =
-      XDoubleToFixed(y1 + radius * sinf(angle) + width * cosf(angle) / 2);
+  xtriangle[0].p3.x = XDoubleToFixed(x1 + radius * cosf(angle) - width * sina);
+  xtriangle[0].p3.y = XDoubleToFixed(y1 + radius * sinf(angle) + width * cosa);
 
   xtriangle[1].p1.x = xtriangle[0].p3.x;
   xtriangle[1].p1.y = xtriangle[0].p3.y;
 
-  xtriangle[1].p2.x =
-      XDoubleToFixed(x1 + radius * cosf(angle) + width * sinf(angle) / 2);
-  xtriangle[1].p2.y =
-      XDoubleToFixed(y1 + radius * sinf(angle) - width * cosf(angle) / 2);
+  xtriangle[1].p2.x = XDoubleToFixed(x1 + radius * cosf(angle) + width * sina);
+  xtriangle[1].p2.y = XDoubleToFixed(y1 + radius * sinf(angle) - width * cosa);
 
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
