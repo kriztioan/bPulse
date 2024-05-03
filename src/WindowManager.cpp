@@ -115,7 +115,7 @@ int WindowManager::EventHandler() {
 
           if (xevent.xbutton.button == Button1) {
 
-            (*mwindow)->Lock();
+            (*mwindow)->Pause();
 
             x = xevent.xbutton.x;
 
@@ -132,7 +132,7 @@ int WindowManager::EventHandler() {
 
           if (xevent.xbutton.button == Button1) {
 
-            (*mwindow)->Unlock();
+            (*mwindow)->Unpause();
 
             ++mwindow;
 

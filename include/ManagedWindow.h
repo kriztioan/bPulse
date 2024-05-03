@@ -80,18 +80,18 @@ public:
 
   int xx, xy, xwidth, xheight;
 
-  void Lock() { _locked = true; }
+  void Pause() { _paused = true; }
 
-  void Unlock() { _locked = false; }
+  void Unpause() { _paused = false; }
 
-  bool IsLocked() { return _locked; }
+  bool IsPaused() { return _paused; }
 
 private:
   GlyphSet _xfont = None;
 
   XGlyphInfo *_xglyphinfo = nullptr;
 
-  bool _locked = false;
+  bool _paused = false;
 
   int DrawRenderedArc0(int x, int y, int radius1, int radius2, int angle1,
                        int angle2);

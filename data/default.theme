@@ -3,7 +3,6 @@
 #
 $background = "data/default.png"
 $icon = "data/icon.png"
-#$font = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 $font = "data/Verdana.ttf"
 $size = 10
 $opacity = 0.8

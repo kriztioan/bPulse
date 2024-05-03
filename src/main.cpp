@@ -163,9 +163,7 @@ int CallbackHandler() {
 
   static unsigned long tick = 0;
 
-  if (mwindow->IsLocked()) {
-
-    ++tick;
+  if (mwindow->IsPaused()) {
 
     return 0;
   }
@@ -449,7 +447,7 @@ int HandleDisk() {
 
 int HandleUser() {
 
-  if (!pmanager->users.front().empty()) {
+  if (!pmanager->users.empty()) {
     mwindow->DrawText(CEN_X, CEN_Y - 8, pmanager->users.front(),
                       "rgba:dd/dd/dd/ff", TEXT::ALIGN::CENTER);
 

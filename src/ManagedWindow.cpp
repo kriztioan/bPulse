@@ -67,8 +67,6 @@ int ManagedWindow::Sync() {
 
   XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
 
-  XSync(xdisplay, false);
-
   XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xcanvas, 0, 0, 0, 0,
                    0, 0, xwidth, xheight);
 
@@ -146,7 +144,7 @@ int ManagedWindow::SetFont(std::string font, int size) {
   _xfont = XRenderCreateGlyphSet(
       xdisplay, XRenderFindStandardFormat(xdisplay, PictStandardA8));
 
-  _xglyphinfo = new XGlyphInfo['~' - ' '];
+  _xglyphinfo = new XGlyphInfo['~' - ' ' + 1];
 
   for (char ch = ' '; ch <= '~'; ch++) {
 
@@ -381,22 +379,23 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
 
   float angle = atan2f(y2 - y1, x2 - x1),
         radius = sqrtf((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1)),
-        sina = sinf(angle) / 2.0, cosa = cosf(angle) / 2.0;
+        sina = sinf(angle), cosa = cosf(angle), hwsina = width * sina / 2.0,
+        hwcosa = width * cosa / 2.0;
 
-  xtriangle[0].p1.x = XDoubleToFixed(x1 - width * sina);
-  xtriangle[0].p1.y = XDoubleToFixed(y1 + width * cosa);
+  xtriangle[0].p1.x = XDoubleToFixed(x1 - hwsina);
+  xtriangle[0].p1.y = XDoubleToFixed(y1 + hwcosa);
 
-  xtriangle[0].p2.x = XDoubleToFixed(x1 + width * sina);
-  xtriangle[0].p2.y = XDoubleToFixed(y1 - width * cosa);
+  xtriangle[0].p2.x = XDoubleToFixed(x1 + hwsina);
+  xtriangle[0].p2.y = XDoubleToFixed(y1 - hwcosa);
 
-  xtriangle[0].p3.x = XDoubleToFixed(x1 + radius * cosf(angle) - width * sina);
-  xtriangle[0].p3.y = XDoubleToFixed(y1 + radius * sinf(angle) + width * cosa);
+  xtriangle[0].p3.x = XDoubleToFixed(x1 + radius * cosa - hwsina);
+  xtriangle[0].p3.y = XDoubleToFixed(y1 + radius * sina + hwcosa);
 
   xtriangle[1].p1.x = xtriangle[0].p3.x;
   xtriangle[1].p1.y = xtriangle[0].p3.y;
 
-  xtriangle[1].p2.x = XDoubleToFixed(x1 + radius * cosf(angle) + width * sina);
-  xtriangle[1].p2.y = XDoubleToFixed(y1 + radius * sinf(angle) - width * cosa);
+  xtriangle[1].p2.x = XDoubleToFixed(x1 + radius * cosa + hwsina);
+  xtriangle[1].p2.y = XDoubleToFixed(y1 + radius * sina - hwcosa);
 
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
@@ -428,8 +427,6 @@ bool ManagedWindow::SetAlwaysOnTop(bool state) {
     XSendEvent(xdisplay, DefaultRootWindow(xdisplay), false,
                SubstructureRedirectMask | SubstructureNotifyMask,
                (XEvent *)&xclient);
-
-    XFlush(xdisplay);
 
     return true;
   }
