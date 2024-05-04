@@ -8,17 +8,14 @@
  ***********************************************/
 
 #include "ManagedWindow.h"
+#include "X11/extensions/Xrender.h"
 
 ManagedWindow::ManagedWindow()
-    : xmask(None), xicon(None), xiconmask(None), xblack({0, 0, 0, 0}) {}
+    : xicon(None), xiconmask(None), xblack({0, 0, 0, 0}) {}
 
 ManagedWindow::~ManagedWindow() {
 
   XRenderFreePicture(xdisplay, xbrush);
-
-  XRenderFreePicture(xdisplay, xpicture);
-
-  XRenderFreePicture(xdisplay, xbackground);
 
   XRenderFreePicture(xdisplay, xcanvas);
 
@@ -32,10 +29,6 @@ ManagedWindow::~ManagedWindow() {
 
     _xfont = None;
   }
-
-  XFreeGC(xdisplay, xmaskgc);
-
-  XFreePixmap(xdisplay, xmask);
 
   XFreePixmap(xdisplay, xicon);
 
@@ -51,8 +44,6 @@ ManagedWindow::~ManagedWindow() {
 // Not working - probably not possible on a backbuffer...
 int ManagedWindow::Scale(XFixed factor) {
 
-  XRenderChangePicture(xdisplay, xpicture, CPClipMask, None);
-
   XTransform xtransform = {{{1, 0, 0}, {0, 1, 0}, {0, 0, factor}}};
 
   XRenderSetPictureTransform(xdisplay, xcanvas, &xtransform);
@@ -61,9 +52,6 @@ int ManagedWindow::Scale(XFixed factor) {
 }
 
 int ManagedWindow::Sync() {
-
-  XRenderComposite(xdisplay, PictOpOver, xcanvas, None, xpicture, 0, 0, 0, 0, 0,
-                   0, xwidth, xheight);
 
   XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
 
@@ -77,10 +65,18 @@ int ManagedWindow::SetOpacity(float opacity) {
 
   Atom wmOpacity = XInternAtom(xdisplay, "_NET_WM_WINDOW_OPACITY", false);
 
-  unsigned long property = opacity * 0xffffffff;
+  union {
+    unsigned int opacity;
+    unsigned char rgba[4];
+  } property;
+
+  for (int i = 0; i < 4; i++) {
+
+    property.rgba[i] = (unsigned int)(opacity * 255.0f);
+  }
 
   XChangeProperty(xdisplay, xwindow, wmOpacity, XA_CARDINAL, 32,
-                  PropModeReplace, (unsigned char *)&property, 1L);
+                  PropModeReplace, (unsigned char *)&property.opacity, 1L);
 
   return 0;
 }
@@ -92,7 +88,7 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 
   XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
 
-  XRenderFillRectangle(xdisplay, PictOpOver, xbrush, &xrendercolor, 0, 0, 1, 1);
+  XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
   return DrawRenderedArc(x, y, radius1, radius2, angle1, angle2);
 }
@@ -227,8 +223,8 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, 0, _xfont, 0,
-                          0, x, y, text.c_str(), text.length());
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont,
+                          0, 0, x, y, text.c_str(), text.length());
 
   return 0;
 }
@@ -316,7 +312,7 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
   xtriangles[i - 1].p3.y =
       XDoubleToFixed(-sinf(a2 - (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
                             xtriangles, 2 * nxtriangles + 1);
 
   return 0;
@@ -360,7 +356,7 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
     xpoints[i].x = XDoubleToFixed(cosf(a2) * radius + x);
     xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius + y);
 
-    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
+    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
                              xpoints, nxpoints);
   };
 
@@ -400,7 +396,7 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, 0, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
                             xtriangle, 2);
 
   return 0;

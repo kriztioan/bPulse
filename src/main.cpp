@@ -30,17 +30,17 @@ int HandleIO();
 
 int HandleEth();
 
+int HandleTime();
+
 int HandleMem();
 
 int HandleDisk();
 
-int HandleCPU();
-
 int HandleDate();
 
-int HandleTime();
-
 int HandleUser();
+
+int HandleCPU();
 
 WindowEvents EventHandler(WindowEvent *e);
 
@@ -177,15 +177,15 @@ int CallbackHandler() {
 
   tm_s = localtime(&t);
 
-  HandleIO();
-
-  HandleEth();
+  HandleCPU();
 
   HandleMem();
 
   HandleDisk();
 
-  HandleCPU();
+  HandleIO();
+
+  HandleEth();
 
   HandleUser();
 
@@ -292,7 +292,7 @@ int HandleTime() {
           (0.75 * R3 *
            sin(2. * M_PI + M_PI / 2. -
                2. * 2. * M_PI * (tm_s->tm_hour + tm_s->tm_min / 60.) / 24.)),
-      3, "rgba:fc/ff/42/88");
+      3, "rgba:8c/8f/42/ff");
 
   mwindow->DrawLine(
       CEN_X, CEN_Y,
@@ -300,7 +300,7 @@ int HandleTime() {
                cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
       CEN_Y - (0.95 * R3 *
                sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
-      2, "rgba:fc/ff/42/88");
+      2, "rgba:8c/8f/42/ff");
 
   mwindow->DrawLine(
       CEN_X - (R3 * 0.25 *

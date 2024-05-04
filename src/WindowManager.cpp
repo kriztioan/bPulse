@@ -251,25 +251,6 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   mwindow->EventHandler = handler;
 
-  mwindow->xmask =
-      XCreatePixmap(_xdisplay, DefaultRootWindow(_xdisplay), width, height, 1);
-
-  XGCValues xgcvalues;
-
-  xgcvalues.function = GXcopy;
-
-  xgcvalues.graphics_exposures = false;
-
-  xgcvalues.foreground = 0;
-
-  xgcvalues.plane_mask = AllPlanes;
-
-  unsigned long xgcvalues_mask =
-      GCFunction | GCGraphicsExposures | GCForeground | GCPlaneMask;
-
-  mwindow->xmaskgc =
-      XCreateGC(_xdisplay, mwindow->xmask, xgcvalues_mask, &xgcvalues);
-
   Pixmap xbackground = None, xbackgroundmask = None;
 
   if (background != nullptr) {
@@ -278,12 +259,6 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
   }
 
   XSetWindowAttributes xwindowattributes;
-
-  xwindowattributes.background_pixmap = ParentRelative;
-
-  xwindowattributes.save_under = true;
-
-  xwindowattributes.override_redirect = false;
 
   xwindowattributes.event_mask = StructureNotifyMask | KeyPressMask |
                                  ExposureMask | ButtonPressMask |
@@ -295,8 +270,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   xwindowattributes.cursor = xcursor;
 
-  unsigned long xwindowmask = CWBackPixmap | CWSaveUnder | CWOverrideRedirect |
-                              CWEventMask | CWDontPropagate | CWCursor;
+  unsigned long xwindowmask = CWEventMask | CWDontPropagate | CWCursor;
 
   mwindow->xwindow = XCreateWindow(
       _xdisplay, DefaultRootWindow(_xdisplay), xpos, ypos, width, height, 0,
@@ -319,7 +293,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
     XChangeProperty(_xdisplay, mwindow->xwindow, wmHints, wmHints, 32,
                     PropModeReplace, (unsigned char *)&mwmHints,
-                    sizeof(mwmHints) / sizeof(long));
+                    sizeof(mwmHints));
   }
 
   wmHints = XInternAtom(_xdisplay, "KWM_WIN_DECORATION", True);
@@ -330,9 +304,8 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
     XChangeProperty(_xdisplay, mwindow->xwindow, wmHints, wmHints, 32,
                     PropModeReplace, (unsigned char *)&KWMHints,
-                    sizeof(KWMHints) / sizeof(long));
+                    sizeof(KWMHints));
   }
-
   wmHints = XInternAtom(_xdisplay, "_WIN_HINTS", True);
 
   if (wmHints != None) {
@@ -341,7 +314,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
     XChangeProperty(_xdisplay, mwindow->xwindow, wmHints, wmHints, 32,
                     PropModeReplace, (unsigned char *)&GNOMEHints,
-                    sizeof(GNOMEHints) / sizeof(long));
+                    sizeof(GNOMEHints));
   }
 
   XSetWMProtocols(_xdisplay, mwindow->xwindow, wmProtocolsOnWindow, 2);
@@ -406,15 +379,15 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   xrenderpictureattributes.poly_edge = PolyEdgeSmooth;
 
-  xrenderpictureattributes.poly_mode = PolyModePrecise;
-
-  mwindow->xpicture = XRenderCreatePicture(
-      _xdisplay, mwindow->xbackbuffer, xrenderpictformat,
-      CPClipMask | CPPolyEdge | CPPolyMode, &xrenderpictureattributes);
+  xrenderpictureattributes.poly_mode = PolyModeImprecise;
 
   mwindow->xbackground =
       XRenderCreatePicture(_xdisplay, xbackground, xrenderpictformat,
                            CPClipMask, &xrenderpictureattributes);
+
+  mwindow->xcanvas = XRenderCreatePicture(
+      _xdisplay, mwindow->xbackbuffer, xrenderpictformat,
+      CPClipMask | CPPolyMode | CPPolyEdge, &xrenderpictureattributes);
 
   Pixmap xbrush =
       XCreatePixmap(_xdisplay, mwindow->xbackbuffer, 1, 1,
@@ -426,37 +399,6 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
                                          CPRepeat, &xrenderpictureattributes);
 
   XFreePixmap(_xdisplay, xbrush);
-
-  Pixmap xcanvas =
-      XCreatePixmap(_xdisplay, mwindow->xbackbuffer, width, height,
-                    DefaultDepth(_xdisplay, DefaultScreen(_xdisplay)));
-
-  mwindow->xcanvas = XRenderCreatePicture(_xdisplay, xcanvas, xrenderpictformat,
-                                          CPClipMask | CPPolyMode | CPPolyEdge,
-                                          &xrenderpictureattributes);
-
-  XSetForeground(_xdisplay, DefaultGC(_xdisplay, DefaultScreen(_xdisplay)),
-                 0xff0000);
-
-  XDrawArc(_xdisplay, xcanvas, DefaultGC(_xdisplay, DefaultScreen(_xdisplay)),
-           0, 0, width / 2, height / 2, 0, 180 * 64);
-
-  XFreePixmap(_xdisplay, xcanvas);
-
-  /*Picture background_alpha_picture = XRenderCreatePicture(_xdisplay,
-  xbackgroundmask, XRenderFindStandardFormat(_xdisplay, PictStandardA8), 0,
-  nullptr);
-
-  xrenderpictureattributes.alpha_map = background_alpha_picture;
-
-  mwindow->xbackground_picture = XRenderCreatePicture(_xdisplay, xbackground,
-  xrenderpictformat,  0, nullptr);//CPAlphaMap, &xrenderpictureattributes);
-
-
-
-  XRenderFreePicture(_xdisplay, background_alpha_picture);
-
-  */
 
   if (xbackgroundmask != None) {
 

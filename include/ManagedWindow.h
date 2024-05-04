@@ -66,17 +66,15 @@ public:
 
   Window xwindow;
 
-  Pixmap xmask, xicon, xiconmask;
+  Pixmap xicon, xiconmask;
 
-  Picture xpicture, xbackground, xbrush, xcanvas;
+  Picture xbackground, xbrush, xcanvas;
 
   XRenderColor xblack;
 
   XdbeBackBuffer xbackbuffer;
 
   XdbeSwapInfo xswapinfo;
-
-  GC xmaskgc;
 
   int xx, xy, xwidth, xheight;
 
