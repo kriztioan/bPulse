@@ -18,6 +18,7 @@
 #include "ThemeManager.h"
 #include "WindowManager.h"
 
+#include <algorithm>
 #include <functional>
 
 #include <iostream>
@@ -98,6 +99,8 @@ int main(int argc, char *argv[], char **envp) {
                         ProcManager::Masks::Disk | ProcManager::Masks::Eth |
                         ProcManager::Masks::IO | ProcManager::Masks::Users);
 
+  pmanager->Probe();
+
   std::function<int(void)> chandler = CallbackHandler;
 
   amanager->RegisterCallback(chandler);
@@ -117,7 +120,8 @@ int main(int argc, char *argv[], char **envp) {
       atoi(smanager->GetOptionForKey("ypos").c_str()), background->width,
       background->height, ehandler, background, icon);
 
-  mwindow->SetFont(tmanager->GetOptionForKey("font"), atoi(tmanager->GetOptionForKey("size").c_str()));
+  mwindow->SetFont(tmanager->GetOptionForKey("font"),
+                   atoi(tmanager->GetOptionForKey("size").c_str()));
 
   mwindow->SetAlwaysOnTop(
       atoi(smanager->GetOptionForKey("alwaysontop").c_str()));
@@ -292,7 +296,7 @@ int HandleTime() {
           (0.75 * R3 *
            sin(2. * M_PI + M_PI / 2. -
                2. * 2. * M_PI * (tm_s->tm_hour + tm_s->tm_min / 60.) / 24.)),
-      3, "rgba:8c/8f/42/ff");
+      3, "rgba:cc/cc/00/ff");
 
   mwindow->DrawLine(
       CEN_X, CEN_Y,
@@ -300,7 +304,7 @@ int HandleTime() {
                cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
       CEN_Y - (0.95 * R3 *
                sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
-      2, "rgba:8c/8f/42/ff");
+      2, "rgba:cc/cc/00/ff");
 
   mwindow->DrawLine(
       CEN_X - (R3 * 0.25 *
@@ -311,7 +315,7 @@ int HandleTime() {
           (R3 * cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
       CEN_Y -
           (R3 * sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
-      1, "rgba:ff/00/00/ff");
+      1, "rgba:ee/00/00/ff");
 
   return 0;
 }
@@ -320,26 +324,21 @@ int HandleIO() {
 
   static double io[2] = {0, 0};
 
-  double io_in[2] = {static_cast<double>(pmanager->io.read) / timeout,
-                     static_cast<double>(pmanager->io.write) / timeout};
+  double io_in[2] = {1000.0 * static_cast<double>(pmanager->io.read) /
+                         static_cast<double>(timeout),
+                     1000.0 * static_cast<double>(pmanager->io.write) /
+                         static_cast<double>(timeout)};
 
   for (int i = 0; i < 2; i++) {
 
-    while (io_in[i] >= 1023.0) {
-
-      io_in[i] /= 1024.0;
-    }
-
-    io[i] = 0.9 * io[i] + 0.1 * 90.0 * io_in[i] / 1024.0;
+    io[i] = 0.9 * io[i] + 0.1 * 90.0 * io_in[i] / (20.0 * 1024.0 * 1024.0);
   }
 
-  if (io[IN] > 0.0)
-    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180, 180 + io[IN],
-                     "rgba:ff/2c/1c/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180,
+                   180 + std::clamp(io[IN], 0.0, 90.0), "rgba:ff/2c/1c/ff");
 
-  if (io[OUT] > 0.0)
-    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 360 - io[OUT], 360,
-                     "rgba:66/ff/4f/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 360 - std::clamp(io[OUT], 0.0, 90.0),
+                   360, "rgba:66/ff/4f/ff");
 
   return 0;
 }
@@ -348,27 +347,21 @@ int HandleEth() {
 
   static double eth[2] = {0, 0};
 
-  double eth_in[2] = {static_cast<double>(pmanager->eth.sent) /
+  double eth_in[2] = {1000.0 * static_cast<double>(pmanager->eth.sent) /
                           static_cast<double>(timeout),
-                      static_cast<double>(pmanager->eth.received) /
+                      1000.0 * static_cast<double>(pmanager->eth.received) /
                           static_cast<double>(timeout)};
 
   for (int i = 0; i < 2; i++) {
 
-    while (eth_in[i] >= 1023.0) {
-
-      eth_in[i] /= 1024.0;
-    }
-
-    eth[i] = 0.9 * eth[i] + 0.1 * 90.0 * eth_in[i] / 1024.0;
+    eth[i] = 0.9 * eth[i] + 0.1 * 90.0 * eth_in[i] / (10.0 * 1024.0 * 1024.0);
   }
 
-  if (eth[SENT] > 0.0)
-    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, eth[SENT], "rgba:11/00/82/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, std::clamp(eth[SENT], 0.0, 90.0),
+                   "rgba:11/00/82/ff");
 
-  if (eth[RECV] > 0.0)
-    mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180 - eth[RECV], 180,
-                     "rgba:39/9c/c4/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180 - std::clamp(eth[RECV], 0.0, 90.0),
+                   180, "rgba:39/9c/c4/ff");
 
   return 0;
 }
@@ -405,25 +398,25 @@ int HandleMem() {
   float val0 = 0.0f, val1 = free;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:ff/00/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/00/00/ff");
 
   val0 = val1;
   val1 += buffer;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/ff/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/aa/00/ff");
 
   val0 = val1;
   val1 += shared;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/00/ff/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/00/aa/ff");
 
   val0 = val1;
-  val1 += kernel;
+  val1 += kernel + 1.0;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:ff/ff/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/aa/00/ff");
 
   return 0;
 }
