@@ -370,8 +370,11 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   mwindow->xswapinfo.swap_action = XdbeBackground;
 
-  XRenderPictFormat *xrenderpictformat = XRenderFindVisualFormat(
-      _xdisplay, DefaultVisual(_xdisplay, DefaultScreen(_xdisplay)));
+  XRenderPictFormat *xrenderpictformat32 = XRenderFindStandardFormat(
+                        _xdisplay, PictStandardARGB32),
+                    *xrenderpictformat = XRenderFindVisualFormat(
+                        _xdisplay,
+                        DefaultVisual(_xdisplay, DefaultScreen(_xdisplay)));
 
   XRenderPictureAttributes xrenderpictureattributes;
 
@@ -389,13 +392,20 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
       _xdisplay, mwindow->xbackbuffer, xrenderpictformat,
       CPClipMask | CPPolyMode | CPPolyEdge, &xrenderpictureattributes);
 
-  Pixmap xbrush =
-      XCreatePixmap(_xdisplay, mwindow->xbackbuffer, 1, 1,
-                    DefaultDepth(_xdisplay, DefaultScreen(_xdisplay)));
+  Pixmap xdraw =
+      XCreatePixmap(_xdisplay, mwindow->xbackbuffer, width, height, 32);
+
+  mwindow->xdraw = XRenderCreatePicture(_xdisplay, xdraw, xrenderpictformat32,
+                                        CPClipMask | CPPolyMode | CPPolyEdge,
+                                        &xrenderpictureattributes);
+
+  XFreePixmap(_xdisplay, xdraw);
+
+  Pixmap xbrush = XCreatePixmap(_xdisplay, mwindow->xbackbuffer, 1, 1, 32);
 
   xrenderpictureattributes.repeat = 1;
 
-  mwindow->xbrush = XRenderCreatePicture(_xdisplay, xbrush, xrenderpictformat,
+  mwindow->xbrush = XRenderCreatePicture(_xdisplay, xbrush, xrenderpictformat32,
                                          CPRepeat, &xrenderpictureattributes);
 
   XFreePixmap(_xdisplay, xbrush);

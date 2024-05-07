@@ -19,6 +19,8 @@ ManagedWindow::~ManagedWindow() {
 
   XRenderFreePicture(xdisplay, xcanvas);
 
+  XRenderFreePicture(xdisplay, xdraw);
+
   if (_xfont) {
 
     delete _xglyphinfo;
@@ -46,17 +48,20 @@ int ManagedWindow::Scale(XFixed factor) {
 
   XTransform xtransform = {{{1, 0, 0}, {0, 1, 0}, {0, 0, factor}}};
 
-  XRenderSetPictureTransform(xdisplay, xcanvas, &xtransform);
+  XRenderSetPictureTransform(xdisplay, xdraw, &xtransform);
 
   return 0;
 }
 
 int ManagedWindow::Sync() {
 
+  XRenderComposite(xdisplay, PictOpSrc, xdraw, None, xcanvas, 0, 0, 0, 0, 0, 0,
+                   xwidth, xheight);
+
   XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
 
-  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xcanvas, 0, 0, 0, 0,
-                   0, 0, xwidth, xheight);
+  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xdraw, 0, 0, 0, 0, 0,
+                   0, xwidth, xheight);
 
   return 0;
 }
@@ -223,8 +228,8 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont,
-                          0, 0, x, y, text.c_str(), text.length());
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xdraw, None, _xfont, 0,
+                          0, x, y, text.c_str(), text.length());
 
   return 0;
 }
@@ -241,7 +246,7 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
 
   XTriangle xtriangles[2 * nxtriangles + 1];
 
-  double a1 = M_PI * angle1 / 180, a2 = M_PI * angle2 / 180;
+  float a1 = M_PI * angle1 / 180, a2 = M_PI * angle2 / 180;
 
   int i = 0;
 
@@ -312,7 +317,7 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
   xtriangles[i - 1].p3.y =
       XDoubleToFixed(-sinf(a2 - (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
                             xtriangles, 2 * nxtriangles + 1);
 
   return 0;
@@ -356,7 +361,7 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
     xpoints[i].x = XDoubleToFixed(cosf(a2) * radius + x);
     xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius + y);
 
-    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
+    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
                              xpoints, nxpoints);
   };
 
@@ -396,7 +401,7 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xcanvas, None, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
                             xtriangle, 2);
 
   return 0;

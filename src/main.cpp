@@ -245,7 +245,7 @@ int HandleCPU() {
 
   if (sum > 0.0f) {
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:14/07/68/ff");
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:14/07/68/aa");
 
     r1 = R1 * std::sqrt(sum);
   }
@@ -255,7 +255,7 @@ int HandleCPU() {
 
     r1 = R1 * std::sqrt(sum);
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:56/52/9e/ff");
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:56/52/9e/aa");
   }
 
   sum -= cpu[USER];
@@ -263,7 +263,7 @@ int HandleCPU() {
 
     r1 = R1 * std::sqrt(sum);
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:af/ae/c4/ff");
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:af/ae/c4/aa");
   }
 
   return 0;
@@ -277,9 +277,9 @@ int HandleDate() {
 
   strftime(month, 4, "%b", tm_s);
 
-  mwindow->DrawText(CEN_X + R2, CEN_Y, day, "rgba:00/00/ff/ff");
+  mwindow->DrawText(CEN_X + R2, CEN_Y, day, "rgba:00/00/ff/aa");
 
-  mwindow->DrawText(CEN_X - R3, CEN_Y, month, "rgba:00/00/ff/ff");
+  mwindow->DrawText(CEN_X - R3, CEN_Y, month, "rgba:00/00/ff/aa");
 
   return 0;
 }
@@ -296,7 +296,7 @@ int HandleTime() {
           (0.75 * R3 *
            sin(2. * M_PI + M_PI / 2. -
                2. * 2. * M_PI * (tm_s->tm_hour + tm_s->tm_min / 60.) / 24.)),
-      3, "rgba:cc/cc/00/ff");
+      3, "rgba:ee/ee/00/aa");
 
   mwindow->DrawLine(
       CEN_X, CEN_Y,
@@ -304,7 +304,7 @@ int HandleTime() {
                cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
       CEN_Y - (0.95 * R3 *
                sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_min / 60.)),
-      2, "rgba:cc/cc/00/ff");
+      2, "rgba:ee/ee/00/aa");
 
   mwindow->DrawLine(
       CEN_X - (R3 * 0.25 *
@@ -315,19 +315,19 @@ int HandleTime() {
           (R3 * cos(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
       CEN_Y -
           (R3 * sin(2. * M_PI + M_PI / 2. - 2. * M_PI * tm_s->tm_sec / 60.)),
-      1, "rgba:ee/00/00/ff");
+      1, "rgba:ff/00/00/aa");
 
   return 0;
 }
 
 int HandleIO() {
 
-  static double io[2] = {0, 0};
+  static float io[2] = {0, 0};
 
-  double io_in[2] = {1000.0 * static_cast<double>(pmanager->io.read) /
-                         static_cast<double>(timeout),
-                     1000.0 * static_cast<double>(pmanager->io.write) /
-                         static_cast<double>(timeout)};
+  float io_in[2] = {1000.0f * static_cast<float>(pmanager->io.read) /
+                        static_cast<float>(timeout),
+                    1000.0f * static_cast<float>(pmanager->io.write) /
+                        static_cast<float>(timeout)};
 
   for (int i = 0; i < 2; i++) {
 
@@ -335,33 +335,35 @@ int HandleIO() {
   }
 
   mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180,
-                   180 + std::clamp(io[IN], 0.0, 90.0), "rgba:ff/2c/1c/ff");
+                   180 + std::clamp(io[IN], 0.0f, 90.0f), "rgba:ff/2c/1c/aa");
 
-  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 360 - std::clamp(io[OUT], 0.0, 90.0),
-                   360, "rgba:66/ff/4f/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3,
+                   180.0 - std::clamp(io[OUT], 0.0f, 90.0f), 180.0,
+                   "rgba:66/ff/4f/aa");
 
   return 0;
 }
 
 int HandleEth() {
 
-  static double eth[2] = {0, 0};
+  static float eth[2] = {0, 0};
 
-  double eth_in[2] = {1000.0 * static_cast<double>(pmanager->eth.sent) /
-                          static_cast<double>(timeout),
-                      1000.0 * static_cast<double>(pmanager->eth.received) /
-                          static_cast<double>(timeout)};
+  float eth_in[2] = {1000.0f * static_cast<float>(pmanager->eth.sent) /
+                         static_cast<float>(timeout),
+                     1000.0f * static_cast<float>(pmanager->eth.received) /
+                         static_cast<float>(timeout)};
 
   for (int i = 0; i < 2; i++) {
 
     eth[i] = 0.9 * eth[i] + 0.1 * 90.0 * eth_in[i] / (10.0 * 1024.0 * 1024.0);
   }
 
-  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, std::clamp(eth[SENT], 0.0, 90.0),
-                   "rgba:11/00/82/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 0, std::clamp(eth[SENT], 0.0f, 90.0f),
+                   "rgba:11/00/82/aa");
 
-  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3, 180 - std::clamp(eth[RECV], 0.0, 90.0),
-                   180, "rgba:39/9c/c4/ff");
+  mwindow->DrawArc(CEN_X, CEN_Y, R2, R3,
+                   360.0 - std::clamp(eth[RECV], 0.0f, 90.0f), 360.0,
+                   "rgba:39/9c/c4/aa");
 
   return 0;
 }
@@ -398,25 +400,25 @@ int HandleMem() {
   float val0 = 0.0f, val1 = free;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/00/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/00/00/aa");
 
   val0 = val1;
   val1 += buffer;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/aa/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/aa/00/aa");
 
   val0 = val1;
   val1 += shared;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/00/aa/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:00/00/ff/aa");
 
   val0 = val1;
   val1 += kernel + 1.0;
 
   if (val1 > 0.0f)
-    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/aa/00/ff");
+    mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, val0, val1, "rgba:aa/aa/00/aa");
 
   return 0;
 }
@@ -430,10 +432,10 @@ int HandleDisk() {
                            static_cast<float>(pmanager->disk.f_blocks);
 
   mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180, 180 + 180.0f * free,
-                   "rgba:bd/56/90/ff");
+                   "rgba:bd/56/90/aa");
 
   mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180.0f + 180.0f * free, 360,
-                   "rgba:a2/2e/d5/ff");
+                   "rgba:a2/2e/d5/aa");
 
   return 0;
 }
@@ -442,10 +444,10 @@ int HandleUser() {
 
   if (!pmanager->users.empty()) {
     mwindow->DrawText(CEN_X, CEN_Y - 8, pmanager->users.front(),
-                      "rgba:dd/dd/dd/ff", TEXT::ALIGN::CENTER);
+                      "rgba:aa/aa/aa/aa", TEXT::ALIGN::CENTER);
 
     mwindow->DrawText(CEN_X, CEN_Y + 24, std::to_string(pmanager->users.size()),
-                      "rgba:dd/dd/dd/ff", TEXT::ALIGN::LEFT);
+                      "rgba:aa/aa/aa/aa", TEXT::ALIGN::LEFT);
   }
 
   return 0;
