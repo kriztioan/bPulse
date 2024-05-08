@@ -68,7 +68,7 @@ public:
 
   Pixmap xicon, xiconmask;
 
-  Picture xbackground, xbrush, xcanvas, xdraw;
+  Picture xbackground, xbrush, xcanvas, xdraw, xpict;
 
   XRenderColor xblack;
 
@@ -88,6 +88,8 @@ private:
   GlyphSet _xfont = None;
 
   XGlyphInfo *_xglyphinfo = nullptr;
+
+  XRenderColor _clear = {0x0000, 0x0000, 0x0000, 0x0000};
 
   bool _paused = false;
 

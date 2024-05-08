@@ -17,6 +17,8 @@ ManagedWindow::~ManagedWindow() {
 
   XRenderFreePicture(xdisplay, xbrush);
 
+  XRenderFreePicture(xdisplay, xpict);
+
   XRenderFreePicture(xdisplay, xcanvas);
 
   XRenderFreePicture(xdisplay, xdraw);
@@ -95,6 +97,9 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
+  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
+                       xheight);
+
   return DrawRenderedArc(x, y, radius1, radius2, angle1, angle2);
 }
 
@@ -106,6 +111,9 @@ int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
   XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
+
+  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
+                       xheight);
 
   return DrawRenderedLine(x1, y1, x2, y2, width);
 }
@@ -326,50 +334,39 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
 int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
                                    int angle1, int angle2) {
 
-  int nxpoints = ceil((angle2 - angle1) * radius2 * M_PI / 180.0f);
+  static int nxpoints = 32;
 
-  if (nxpoints < 4)
-    nxpoints = 4;
+  static XPointFixed xpoints[32];
 
-  XPointFixed xpoints[nxpoints];
+  float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
+        da = (a2 - a1) / (nxpoints - 3), cosfa1 = cosf(a1), sinfa1 = -sinf(a1);
 
-  int nxtriangles = nxpoints - 3;
+  int i = 0;
 
-  auto xrender = [&](int angle1, int angle2) {
-    float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
-          da = (a2 - a1) / nxtriangles, cosfa1 = cosf(a1), sinfa1 = -sinf(a1);
+  xpoints[i].x = XDoubleToFixed(cosfa1 * radius2 + x);
+  xpoints[i++].y = XDoubleToFixed(sinfa1 * radius2 + y);
 
-    int i = 0;
+  xpoints[i].x = XDoubleToFixed(cosfa1 * radius1 + x);
+  xpoints[i++].y = XDoubleToFixed(sinfa1 * radius1 + y);
 
-    xpoints[i].x = XDoubleToFixed(cosfa1 * radius2 + x);
-    xpoints[i++].y = XDoubleToFixed(sinfa1 * radius2 + y);
+  xpoints[i].x = XDoubleToFixed(cosf(a1 + da) * radius2 + x);
+  xpoints[i++].y = XDoubleToFixed(-sinf(a1 + da) * radius2 + y);
 
-    xpoints[i].x = XDoubleToFixed(cosfa1 * radius1 + x);
-    xpoints[i++].y = XDoubleToFixed(sinfa1 * radius1 + y);
+  for (; i < nxpoints - 1; i += 2) {
+    xpoints[i].x = XDoubleToFixed(cosf(a1 + da * (i - 1)) * radius1 + x);
+    xpoints[i].y = XDoubleToFixed(-sinf(a1 + da * (i - 1)) * radius1 + y);
+    xpoints[i + 1].x = XDoubleToFixed(cosf(a1 + da * i) * radius2 + x);
+    xpoints[i + 1].y = XDoubleToFixed(-sinf(a1 + da * i) * radius2 + y);
+  }
 
-    xpoints[i].x = XDoubleToFixed(cosf(a1 + da) * radius2 + x);
-    xpoints[i++].y = XDoubleToFixed(-sinf(a1 + da) * radius2 + y);
+  xpoints[i].x = XDoubleToFixed(cosf(a2) * radius1 + x);
+  xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius1 + y);
 
-    float radius = radius1;
-    for (; i < nxpoints - 1; i++) {
-      xpoints[i].x = XDoubleToFixed(cosf(a1 + da * (i - 1)) * radius + x);
-      xpoints[i].y = XDoubleToFixed(-sinf(a1 + da * (i - 1)) * radius + y);
-      radius = (i % 2 == 0) ? radius1 : radius2;
-    }
+  XRenderCompositeTriStrip(xdisplay, PictOpAdd, xbrush, xpict, None, 0, 0,
+                           xpoints, nxpoints);
 
-    radius = (i % 2 == 0) ? radius2 : radius1;
-    xpoints[i].x = XDoubleToFixed(cosf(a2) * radius + x);
-    xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius + y);
-
-    XRenderCompositeTriStrip(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
-                             xpoints, nxpoints);
-  };
-
-  xrender(angle1, angle2);
-
-  int delta = (angle2 - angle1) / nxpoints / 2;
-
-  xrender(angle1 + delta, angle2 - delta);
+  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
+                   xwidth, xheight);
 
   return 0;
 }
@@ -401,8 +398,11 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xpict, None, 0, 0,
                             xtriangle, 2);
+
+  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
+                   xwidth, xheight);
 
   return 0;
 }

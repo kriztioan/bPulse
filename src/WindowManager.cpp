@@ -401,6 +401,15 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   XFreePixmap(_xdisplay, xdraw);
 
+  Pixmap xpict =
+      XCreatePixmap(_xdisplay, mwindow->xbackbuffer, width, height, 32);
+
+  mwindow->xpict =
+      XRenderCreatePicture(_xdisplay, xpict, xrenderpictformat32,
+                           CPClipMask | CPPolyEdge | CPPolyMode, &xrenderpictureattributes);
+
+  XFreePixmap(_xdisplay, xpict);
+
   Pixmap xbrush = XCreatePixmap(_xdisplay, mwindow->xbackbuffer, 1, 1, 32);
 
   xrenderpictureattributes.repeat = 1;
