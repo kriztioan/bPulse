@@ -57,13 +57,19 @@ int ManagedWindow::Scale(XFixed factor) {
 
 int ManagedWindow::Sync() {
 
+  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xdraw, 0, 0, 0, 0, 0,
+                   0, xwidth, xheight);
+
+  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
+                   xwidth, xheight);
+
   XRenderComposite(xdisplay, PictOpSrc, xdraw, None, xcanvas, 0, 0, 0, 0, 0, 0,
                    xwidth, xheight);
 
   XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
 
-  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xdraw, 0, 0, 0, 0, 0,
-                   0, xwidth, xheight);
+  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
+                       xheight);
 
   return 0;
 }
@@ -97,9 +103,6 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
-                       xheight);
-
   return DrawRenderedArc(x, y, radius1, radius2, angle1, angle2);
 }
 
@@ -111,9 +114,6 @@ int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
   XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
-
-  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
-                       xheight);
 
   return DrawRenderedLine(x1, y1, x2, y2, width);
 }
@@ -210,12 +210,14 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   unsigned int xpixels = 0, ypixels = 0;
 
-  for (std::string::iterator it = text.begin(); it != text.end(); it++) {
+  if (align != TEXT::ALIGN::LEFT) {
+    for (std::string::iterator it = text.begin(); it != text.end(); it++) {
 
-    xpixels += _xglyphinfo[*it - ' '].width;
+      xpixels += _xglyphinfo[*it - ' '].width;
 
-    ypixels = std::max(
-        ypixels, static_cast<unsigned int>(_xglyphinfo[*it - ' '].height));
+      ypixels = std::max(
+          ypixels, static_cast<unsigned int>(_xglyphinfo[*it - ' '].height));
+    }
   }
 
   switch (align) {
@@ -236,7 +238,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xdraw, None, _xfont, 0,
+  XRenderCompositeString8(xdisplay, PictOpAdd, xbrush, xpict, None, _xfont, 0,
                           0, x, y, text.c_str(), text.length());
 
   return 0;
@@ -334,9 +336,17 @@ int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
 int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
                                    int angle1, int angle2) {
 
-  static int nxpoints = 32;
+  int nxpoints = ceil(0.5 * (angle2 - angle1) * radius2 * M_PI / 180.0);
 
-  static XPointFixed xpoints[32];
+  if (nxpoints < 4) {
+    nxpoints = 4;
+  }
+
+  if (nxpoints % 2 != 0) {
+    ++nxpoints;
+  }
+
+  XPointFixed xpoints[nxpoints];
 
   float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
         da = (a2 - a1) / (nxpoints - 3), cosfa1 = cosf(a1), sinfa1 = -sinf(a1);
@@ -364,9 +374,6 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
 
   XRenderCompositeTriStrip(xdisplay, PictOpAdd, xbrush, xpict, None, 0, 0,
                            xpoints, nxpoints);
-
-  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
-                   xwidth, xheight);
 
   return 0;
 }
@@ -400,9 +407,6 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
 
   XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xpict, None, 0, 0,
                             xtriangle, 2);
-
-  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
-                   xwidth, xheight);
 
   return 0;
 }
