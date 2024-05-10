@@ -68,7 +68,7 @@ public:
 
   Pixmap xicon, xiconmask;
 
-  Picture xbackground, xbrush, xcanvas, xdraw, xpict;
+  Picture xbackground, xbrush, xcanvas, xpict;
 
   XRenderColor xblack;
 

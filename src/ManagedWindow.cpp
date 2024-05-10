@@ -21,8 +21,6 @@ ManagedWindow::~ManagedWindow() {
 
   XRenderFreePicture(xdisplay, xcanvas);
 
-  XRenderFreePicture(xdisplay, xdraw);
-
   if (_xfont) {
 
     delete _xglyphinfo;
@@ -50,20 +48,17 @@ int ManagedWindow::Scale(XFixed factor) {
 
   XTransform xtransform = {{{1, 0, 0}, {0, 1, 0}, {0, 0, factor}}};
 
-  XRenderSetPictureTransform(xdisplay, xdraw, &xtransform);
+  XRenderSetPictureTransform(xdisplay, xcanvas, &xtransform);
 
   return 0;
 }
 
 int ManagedWindow::Sync() {
 
-  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xdraw, 0, 0, 0, 0, 0,
+  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xcanvas, 0, 0, 0, 0, 0,
                    0, xwidth, xheight);
 
-  XRenderComposite(xdisplay, PictOpOver, xpict, None, xdraw, 0, 0, 0, 0, 0, 0,
-                   xwidth, xheight);
-
-  XRenderComposite(xdisplay, PictOpSrc, xdraw, None, xcanvas, 0, 0, 0, 0, 0, 0,
+  XRenderComposite(xdisplay, PictOpOver, xpict, None, xcanvas, 0, 0, 0, 0, 0, 0,
                    xwidth, xheight);
 
   XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
@@ -240,95 +235,6 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderCompositeString8(xdisplay, PictOpAdd, xbrush, xpict, None, _xfont, 0,
                           0, x, y, text.c_str(), text.length());
-
-  return 0;
-}
-
-int ManagedWindow::DrawRenderedArc0(int x, int y, int radius1, int radius2,
-                                    int angle1, int angle2) {
-
-  int nxtriangles = ceil((angle2 - angle1) * radius2 / 360.);
-
-  if (nxtriangles == 0) {
-
-    return 1;
-  }
-
-  XTriangle xtriangles[2 * nxtriangles + 1];
-
-  float a1 = M_PI * angle1 / 180, a2 = M_PI * angle2 / 180;
-
-  int i = 0;
-
-  xtriangles[i].p1.x = XDoubleToFixed(cosf(a1) * radius1 + x);
-  xtriangles[i].p2.x = XDoubleToFixed(cosf(a1) * radius2 + x);
-  xtriangles[i].p3.x =
-      XDoubleToFixed(cosf(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + x);
-
-  xtriangles[i].p1.y = XDoubleToFixed(-sinf(a1) * radius1 + y);
-  xtriangles[i].p2.y = XDoubleToFixed(-sinf(a1) * radius2 + y);
-  xtriangles[i].p3.y =
-      XDoubleToFixed(-sinf(a1 + (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
-
-  ++i;
-
-  for (int j = 0; j < nxtriangles; j++) {
-
-    xtriangles[i].p1.x =
-        XDoubleToFixed(cosf(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + x);
-    xtriangles[i].p2.x = XDoubleToFixed(
-        cosf(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + x);
-    xtriangles[i].p3.x = XDoubleToFixed(
-        cosf(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + x);
-
-    xtriangles[i].p1.y =
-        XDoubleToFixed(-sinf(a1 + (a2 - a1) * (j) / nxtriangles) * radius1 + y);
-    xtriangles[i].p2.y = XDoubleToFixed(
-        -sinf(a1 + (a2 - a1) * (j + 1) / nxtriangles) * radius1 + y);
-    xtriangles[i].p3.y = XDoubleToFixed(
-        -sinf(a1 + (a2 - a1) * (j + 0.5) / nxtriangles) * radius2 + y);
-
-    xtriangles[i + 1].p1.x = xtriangles[i].p2.x;
-    xtriangles[i + 1].p2.x = xtriangles[i].p3.x;
-    xtriangles[i + 1].p3.x = XDoubleToFixed(
-        cosf(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + x);
-
-    xtriangles[i + 1].p1.y = xtriangles[i].p2.y;
-    xtriangles[i + 1].p2.y = xtriangles[i].p3.y;
-    xtriangles[i + 1].p3.y = XDoubleToFixed(
-        -sinf(a1 + (a2 - a1) * (j + 0.5 + 1) / nxtriangles) * radius2 + y);
-
-    /*xtriangles[i+2].p1.x = xtriangles[i].p1.x;
-    xtriangles[i+2].p2.x = xtriangles[i].p2.x;
-    xtriangles[i+2].p3.x = xtriangles[i+1].p3.x;
-
-    xtriangles[i+2].p1.y = xtriangles[i].p1.y;
-    xtriangles[i+2].p2.y = xtriangles[i].p2.y;
-    xtriangles[i+2].p3.y = xtriangles[i+1].p3.y;
-
-    xtriangles[i+3].p1.x = xtriangles[i].p1.x;
-    xtriangles[i+3].p2.x = xtriangles[i].p3.x;
-    xtriangles[i+3].p3.x = xtriangles[i+1].p3.x;
-
-    xtriangles[i+3].p1.y = xtriangles[i].p1.y;
-    xtriangles[i+3].p2.y = xtriangles[i].p3.y;
-    xtriangles[i+3].p3.y = xtriangles[i+1].p3.y;*/
-
-    i += 2;
-  }
-
-  xtriangles[i - 1].p1.x = XDoubleToFixed(cosf(a2) * radius1 + x);
-  xtriangles[i - 1].p2.x = XDoubleToFixed(cosf(a2) * radius2 + x);
-  xtriangles[i - 1].p3.x =
-      XDoubleToFixed(cosf(a2 - 0.5 * (a2 - a1) / nxtriangles) * radius2 + x);
-
-  xtriangles[i - 1].p1.y = XDoubleToFixed(-sinf(a2) * radius1 + y);
-  xtriangles[i - 1].p2.y = XDoubleToFixed(-sinf(a2) * radius2 + y);
-  xtriangles[i - 1].p3.y =
-      XDoubleToFixed(-sinf(a2 - (a2 - a1) * 0.5 / nxtriangles) * radius2 + y);
-
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xdraw, None, 0, 0,
-                            xtriangles, 2 * nxtriangles + 1);
 
   return 0;
 }

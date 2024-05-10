@@ -275,8 +275,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
   mwindow->xwindow = XCreateWindow(
       _xdisplay, DefaultRootWindow(_xdisplay), xpos, ypos, width, height, 0,
       DefaultDepth(_xdisplay, DefaultScreen(_xdisplay)), InputOutput,
-      DefaultVisual(_xdisplay, DefaultScreen(_xdisplay)), xwindowmask,
-      &xwindowattributes);
+      CopyFromParent, xwindowmask, &xwindowattributes);
 
   XFreeCursor(_xdisplay, xcursor);
 
@@ -385,28 +384,19 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
   xrenderpictureattributes.poly_mode = PolyModeImprecise;
 
   mwindow->xbackground =
-      XRenderCreatePicture(_xdisplay, xbackground, xrenderpictformat,
+      XRenderCreatePicture(_xdisplay, xbackground, xrenderpictformat32,
                            CPClipMask, &xrenderpictureattributes);
 
   mwindow->xcanvas = XRenderCreatePicture(
       _xdisplay, mwindow->xbackbuffer, xrenderpictformat,
       CPClipMask | CPPolyMode | CPPolyEdge, &xrenderpictureattributes);
 
-  Pixmap xdraw =
-      XCreatePixmap(_xdisplay, mwindow->xbackbuffer, width, height, 32);
-
-  mwindow->xdraw = XRenderCreatePicture(_xdisplay, xdraw, xrenderpictformat32,
-                                        CPClipMask | CPPolyMode | CPPolyEdge,
-                                        &xrenderpictureattributes);
-
-  XFreePixmap(_xdisplay, xdraw);
-
   Pixmap xpict =
       XCreatePixmap(_xdisplay, mwindow->xbackbuffer, width, height, 32);
 
-  mwindow->xpict =
-      XRenderCreatePicture(_xdisplay, xpict, xrenderpictformat32,
-                           CPClipMask | CPPolyEdge | CPPolyMode, &xrenderpictureattributes);
+  mwindow->xpict = XRenderCreatePicture(_xdisplay, xpict, xrenderpictformat32,
+                                        CPClipMask | CPPolyEdge | CPPolyMode,
+                                        &xrenderpictureattributes);
 
   XFreePixmap(_xdisplay, xpict);
 
@@ -460,81 +450,59 @@ int WindowManager::Image2XPixmap(Image *image, Pixmap *pixmap, Pixmap *mask) {
     return 0;
   }
 
-  XImage *ximage = XCreateImage(
-      _xdisplay, DefaultVisual(_xdisplay, DefaultScreen(_xdisplay)),
-      DefaultDepth(_xdisplay, DefaultScreen(_xdisplay)), ZPixmap, 0,
-      (char *)image->data, image->width, image->height, image->depth,
-      image->bytes_per_line);
+  XImage *ximage =
+      XCreateImage(_xdisplay, CopyFromParent, 32, ZPixmap, 0,
+                   (char *)image->data, image->width, image->height, 32, 0);
 
   if (ImageByteOrder(_xdisplay) != LSBFirst) {
 
     ximage->byte_order = LSBFirst;
   }
 
-  *pixmap = XCreatePixmap(_xdisplay, DefaultRootWindow(_xdisplay),
-                          ximage->width, ximage->height,
-                          DefaultDepth(_xdisplay, DefaultScreen(_xdisplay)));
+  *pixmap = XCreatePixmap(_xdisplay, DefaultRootWindow(_xdisplay), image->width,
+                          image->height, 32);
 
-  XPutImage(_xdisplay, *pixmap, DefaultGC(_xdisplay, DefaultScreen(_xdisplay)),
-            ximage, 0, 0, 0, 0, ximage->width, ximage->height);
+  XGCValues xgcvalues;
 
-  if (image->channels == 4) {
+  xgcvalues.function = GXcopy;
 
-    *mask = XCreatePixmap(_xdisplay, DefaultRootWindow(_xdisplay),
-                          ximage->width, ximage->height, 1);
+  xgcvalues.graphics_exposures = false;
 
-    XGCValues xgcvalues;
+  xgcvalues.foreground = 0;
 
-    xgcvalues.function = GXcopy;
+  xgcvalues.plane_mask = AllPlanes;
 
-    xgcvalues.graphics_exposures = false;
+  unsigned long xgcvalues_mask =
+      GCFunction | GCGraphicsExposures | GCForeground | GCPlaneMask;
 
-    xgcvalues.foreground = 0;
+  GC gc = XCreateGC(_xdisplay, *pixmap, xgcvalues_mask, &xgcvalues);
 
-    xgcvalues.plane_mask = AllPlanes;
+  XPutImage(_xdisplay, *pixmap, gc, ximage, 0, 0, 0, 0, ximage->width,
+            ximage->height);
 
-    unsigned long xgcvalues_mask =
-        GCFunction | GCGraphicsExposures | GCForeground | GCPlaneMask;
+  *mask = XCreatePixmap(_xdisplay, DefaultRootWindow(_xdisplay), ximage->width,
+                        ximage->height, 1);
 
-    GC maskgc = XCreateGC(_xdisplay, *mask, xgcvalues_mask, &xgcvalues);
+  GC maskgc = XCreateGC(_xdisplay, *mask, xgcvalues_mask, &xgcvalues);
 
-    XFillRectangle(_xdisplay, *mask, maskgc, 0, 0, ximage->width,
-                   ximage->height);
+  XFillRectangle(_xdisplay, *mask, maskgc, 0, 0, ximage->width, ximage->height);
 
-    XSetForeground(_xdisplay, maskgc, 1);
+  XSetForeground(_xdisplay, maskgc, 1);
 
-    char alpha;
+  for (int y = 0; y < ximage->height; y++) {
 
-    char alpha_map[ximage->width * ximage->height];
+    for (int x = 0; x < ximage->width; x++) {
 
-    for (int y = 0; y < ximage->height; y++) {
+      if ((unsigned char)ximage->data[3 + (y * ximage->width + x) * 4] > 127) {
 
-      for (int x = 0; x < ximage->width; x++) {
-
-        alpha = ximage->data[3 + (y * ximage->width + x) * 4];
-
-        // alpha_map[y * ximage->width + x] = ximage->data[3 + (y *
-        // ximage->width + x) * 4];
-
-        if (alpha == -1) {
-
-          XDrawPoint(_xdisplay, *mask, maskgc, x, y);
-        }
+        XDrawPoint(_xdisplay, *mask, maskgc, x, y);
       }
     }
-
-    // XImage *alpha_image = XCreateImage(_xdisplay, 0, 8, XYPixmap, 0,
-    // alpha_map, image->width, image->height, 8, 0);
-
-    // XPutImage(_xdisplay, *mask, maskgc, alpha_image, 0, 0, 0, 0,
-    // alpha_image->width, alpha_image->height);
-
-    XFreeGC(_xdisplay, maskgc);
-
-    // alpha_image->data = nullptr;
-
-    // XDestroyImage(alpha_image);
   }
+
+  XFreeGC(_xdisplay, maskgc);
+
+  XFreeGC(_xdisplay, gc);
 
   ximage->data = nullptr;
 
