@@ -325,5 +325,75 @@ int ProcManager::Probe() {
     endutxent();
   }
 
+  if (_mask & Masks::Battery) {
+
+    CFTypeRef blob = IOPSCopyPowerSourcesInfo();
+
+    CFArrayRef sources = IOPSCopyPowerSourcesList(blob);
+
+    if (CFArrayGetCount(sources) == 0) {
+
+      return -1;
+    }
+
+    CFDictionaryRef source =
+        IOPSGetPowerSourceDescription(blob, CFArrayGetValueAtIndex(sources, 0));
+
+    if (NULL == source) {
+
+      return -1;
+    }
+
+    CFNumberRef nValue;
+
+    long currentCapacity, maxCapacity;
+
+    nValue = (CFNumberRef)CFDictionaryGetValue(source,
+                                               CFSTR(kIOPSCurrentCapacityKey));
+
+    CFNumberGetValue(nValue, kCFNumberSInt64Type, &currentCapacity);
+
+    nValue =
+        (CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSMaxCapacityKey));
+
+    CFNumberGetValue(nValue, kCFNumberSInt64Type, &maxCapacity);
+
+    battery = {.powerstate = PowerStates::Unknown,
+               .level = static_cast<float>(currentCapacity) /
+                        static_cast<float>(maxCapacity)};
+
+    CFStringRef sValue = (CFStringRef)CFDictionaryGetValue(
+        source, CFSTR(kIOPSPowerSourceStateKey));
+
+    if (kCFCompareEqualTo ==
+        CFStringCompare(CFSTR(kIOPSACPowerValue), sValue, 0)) {
+
+      nValue = (CFNumberRef)CFDictionaryGetValue(
+          source, CFSTR(kIOPSTimeToFullChargeKey));
+
+      CFBooleanRef bValue =
+          (CFBooleanRef)CFDictionaryGetValue(source, CFSTR(kIOPSIsChargingKey));
+
+      if (CFBooleanGetValue(bValue)) {
+
+        battery.powerstate = PowerStates::BatteryCharging;
+      } else {
+
+        battery.powerstate = PowerStates::ACPower;
+      }
+    } else if (kCFCompareEqualTo ==
+               CFStringCompare(CFSTR(kIOPSBatteryPowerValue), sValue, 0)) {
+
+      nValue =
+          (CFNumberRef)CFDictionaryGetValue(source, CFSTR(kIOPSTimeToEmptyKey));
+
+      battery.powerstate = PowerStates::BatteryDischarging;
+    }
+
+    CFRelease(blob);
+
+    CFRelease(sources);
+  }
+
   return 0;
 }

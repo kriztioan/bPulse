@@ -55,13 +55,21 @@ int ManagedWindow::Scale(XFixed factor) {
 
 int ManagedWindow::Sync() {
 
-  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xcanvas, 0, 0, 0, 0, 0,
-                   0, xwidth, xheight);
+  XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
+
+  XRenderComposite(xdisplay, PictOpSrc, xbackground, None, xcanvas, 0, 0, 0, 0,
+                   0, 0, xwidth, xheight);
+
+  XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
+                       xheight);
+
+  return 0;
+}
+
+int ManagedWindow::RenderLayer() {
 
   XRenderComposite(xdisplay, PictOpOver, xpict, None, xcanvas, 0, 0, 0, 0, 0, 0,
                    xwidth, xheight);
-
-  XdbeSwapBuffers(xdisplay, &xswapinfo, 1);
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xpict, &_clear, 0, 0, xwidth,
                        xheight);
@@ -233,7 +241,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
 
   XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
 
-  XRenderCompositeString8(xdisplay, PictOpAdd, xbrush, xpict, None, _xfont, 0,
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont, 0,
                           0, x, y, text.c_str(), text.length());
 
   return 0;
@@ -311,7 +319,7 @@ int ManagedWindow::DrawRenderedLine(int x1, int y1, int x2, int y2, int width) {
   xtriangle[1].p3.x = xtriangle[0].p2.x;
   xtriangle[1].p3.y = xtriangle[0].p2.y;
 
-  XRenderCompositeTriangles(xdisplay, PictOpOver, xbrush, xpict, None, 0, 0,
+  XRenderCompositeTriangles(xdisplay, PictOpAdd, xbrush, xpict, None, 0, 0,
                             xtriangle, 2);
 
   return 0;

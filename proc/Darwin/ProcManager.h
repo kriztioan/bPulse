@@ -40,9 +40,12 @@
 
 #include <algorithm>
 
+#include <CoreFoundation/CFString.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOBSD.h>
 #include <IOKit/IOKitLib.h>
+#include <IOKit/ps/IOPSKeys.h>
+#include <IOKit/ps/IOPowerSources.h>
 #include <IOKit/storage/IOBlockStorageDriver.h>
 #include <IOKit/storage/IOMedia.h>
 
@@ -71,6 +74,7 @@ public:
     Alarm,
     Host,
     Users,
+    Battery,
     All = 512L
   };
 
@@ -89,6 +93,19 @@ public:
   struct s_io {
     unsigned long read, write;
   } io;
+
+  enum class PowerStates {
+    Unknown,
+    ACPower,
+    BatteryCharging,
+    BatteryDischarging,
+    All = 512L
+  };
+
+  struct s_battery {
+    PowerStates powerstate;
+    float level;
+  } battery;
 
   std::string host;
 

@@ -15,7 +15,7 @@ ProcManager::ProcManager() {
 }
 
 ProcManager::ProcManager(int argc, char *argv[]) {
-    
+
     _init(argc, argv);
 }
 
@@ -48,9 +48,9 @@ int ProcManager::Probe() {
 
       return 1;
     }
-    
+
     std::string line;
-    
+
     while(std::getline(fstream, line)) {
 
       if(line.find(_cpu) != std::string::npos) {
@@ -60,7 +60,7 @@ int ProcManager::Probe() {
     }
 
     sscanf(line.c_str(), "%*s %lu %lu %lu %lu", &proc_cpu2.user, &proc_cpu2.nice, &proc_cpu2.sys, &proc_cpu2.idle);
- 
+
     fstream.close();
 
     proc_cpu2.total = proc_cpu2.user + proc_cpu2.nice + proc_cpu2.sys + proc_cpu2.idle;
@@ -84,9 +84,9 @@ int ProcManager::Probe() {
 
       return 1;
     }
-    
+
     std::string line;
-    
+
     while(std::getline(fstream, line)) {
 
       if(line.find(_eth) != std::string::npos) {
@@ -96,7 +96,7 @@ int ProcManager::Probe() {
     }
 
     sscanf(line.c_str(), " %*s %lu %*d %*d %*d %*d %*d %*d %*d %lu", &proc_eth2.received, &proc_eth2.sent);
- 
+
     fstream.close();
 
     eth.received = proc_eth2.received - proc_eth1.received;
@@ -115,9 +115,9 @@ int ProcManager::Probe() {
 
       return 1;
     }
-    
+
     std::string line;
-    
+
     while(std::getline(fstream, line)) {
 
       if(line.find(_io) != std::string::npos) {
@@ -127,7 +127,7 @@ int ProcManager::Probe() {
     }
 
     sscanf(line.c_str(), "%*d %*d %*s %*d %*d %lu %*d %*d %lu", &proc_io2.read, &proc_io2.write);
- 
+
     fstream.close();
 
     io.read = 512 * (proc_io2.read - proc_io1.read);
@@ -143,18 +143,18 @@ int ProcManager::Probe() {
   }
 
   if(_mask & Masks::Host) {
-    
+
     char *user = getenv("USER"), *host = getenv("HOST");
 
     if (user != nullptr) {
 
-      _host = std::string(user); 
+      _host = std::string(user);
     }
-    
+
     if (host != nullptr) {
-        
+
       _host += '@';
-        
+
       _host += std::string();
     }
   }
@@ -171,25 +171,25 @@ int ProcManager::Probe() {
       return 1;
     }
   }
-    
+
   if(_mask & Masks::Disk) {
-  
+
     if(statfs(_disk.c_str(), &disk) != 0) {
-        
+
         return 1;
-    }   
+    }
   }
-    
+
   if(_mask & Masks::Users) {
-    
+
     setutxent();
-    
+
     struct utmpx *s_utmpx;
-    
+
     while((s_utmpx = getutxent()) != NULL) {
-        
+
         if(s_utmpx->ut_type == USER_PROCESS) {
-            
+
             int s;
 
             for(s = users.size(); s--;) {
@@ -199,15 +199,22 @@ int ProcManager::Probe() {
                     break;
                 }
             }
-            
+
             if(s < 0) {
-                
+
                 users.push_back(std::string(s_utmpx->ut_user));
             }
         }
     }
-    
+
     endutxent();
+  }
+
+  if (_mask & Masks::Battery) {
+
+      // Do battery
+      battery.level = -1;
+      battery.powerstate = PowerStates::Unknown;
   }
 
   return 0;

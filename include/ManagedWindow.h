@@ -54,6 +54,8 @@ public:
 
   int SetFont(std::string font, int size);
 
+  int RenderLayer();
+
   int Sync();
 
   int Scale(XFixed factor);

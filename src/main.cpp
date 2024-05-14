@@ -43,6 +43,8 @@ int HandleUser();
 
 int HandleCPU();
 
+int HandleBattery();
+
 WindowEvents EventHandler(WindowEvent *e);
 
 ApplicationManager *amanager = nullptr;
@@ -97,7 +99,8 @@ int main(int argc, char *argv[], char **envp) {
 
   pmanager->SetProcMask(ProcManager::Masks::CPU | ProcManager::Masks::Mem |
                         ProcManager::Masks::Disk | ProcManager::Masks::Eth |
-                        ProcManager::Masks::IO | ProcManager::Masks::Users);
+                        ProcManager::Masks::IO | ProcManager::Masks::Users |
+                        ProcManager::Masks::Battery);
 
   pmanager->Probe();
 
@@ -191,11 +194,19 @@ int CallbackHandler() {
 
   HandleEth();
 
+  mwindow->RenderLayer();
+
   HandleUser();
 
   HandleDate();
 
+  HandleBattery();
+
+  mwindow->RenderLayer();
+
   HandleTime();
+
+  mwindow->RenderLayer();
 
   mwindow->Sync();
 
@@ -436,6 +447,8 @@ int HandleDisk() {
   mwindow->DrawArc(CEN_X, CEN_Y, R1, R2, 180.0f + 180.0f * free, 360,
                    "rgba:a2/2e/d5/bb");
 
+  mwindow->RenderLayer();
+
   return 0;
 }
 
@@ -447,6 +460,39 @@ int HandleUser() {
 
     mwindow->DrawText(CEN_X, CEN_Y + 24, std::to_string(pmanager->users.size()),
                       "rgba:aa/aa/aa/bb", TEXT::ALIGN::LEFT);
+  }
+
+  return 0;
+}
+
+int HandleBattery() {
+
+  static const float width = 14;
+
+  static const char *colors[] = {"", "rgba:dd/dd/dd/dd", "rgba:ee/00/00/dd",
+                                 "rgba:ff/a5/00/dd"};
+
+  if (pmanager->battery.powerstate != ProcManager::PowerStates::Unknown) {
+
+    float start = CEN_X - width / 2;
+
+    float length = pmanager->battery.level * width;
+
+    if (length > 0) {
+
+      mwindow->DrawLine(start, CEN_Y + 56, start + length, CEN_Y + 56, 5,
+                        "rgba:00/ee/00/dd");
+    }
+
+    if (length < width) {
+
+      start += length;
+
+      length = width - length;
+
+      mwindow->DrawLine(start, CEN_Y + 56, start + length, CEN_Y + 56, 5,
+                        colors[(int)pmanager->battery.powerstate]);
+    }
   }
 
   return 0;

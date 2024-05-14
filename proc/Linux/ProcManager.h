@@ -43,6 +43,7 @@ public:
     Alarm,
     Host,
     Users,
+    Battery,
     All = 512L
   };
 
@@ -61,6 +62,19 @@ public:
   struct s_io {
     unsigned long read, write;
   } io;
+
+  enum class PowerStates {
+    Unknown,
+    ACPower,
+    BatteryCharging,
+    BatteryDischarging,
+    All = 512L
+  };
+
+  struct s_battery {
+    PowerStates powerstate;
+    float level;
+  } battery;
 
   std::vector<std::string> users;
 
