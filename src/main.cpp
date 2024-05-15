@@ -245,7 +245,7 @@ int HandleCPU() {
   static float cpu[3] = {0.0f, 0.0f, 0.0f};
 
   float cpu_in[3] = {pmanager->cpu.sys, pmanager->cpu.user, pmanager->cpu.nice},
-        sum = 0.0f, r1 = 0.0;
+        sum = 0.0f, r1, r2;
 
   for (int i = 0; i < 3; i++) {
 
@@ -254,27 +254,33 @@ int HandleCPU() {
     sum += cpu[i];
   }
 
-  if (sum > 0.0f) {
-
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:14/07/68/bb");
-
-    r1 = R1 * std::sqrt(sum);
-  }
+  r2 = R1 * sqrtf(sum);
 
   sum -= cpu[NICE];
-  if (sum > 0.0f) {
 
-    r1 = R1 * std::sqrt(sum);
+  r1 = R1 * sqrtf(sum);
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:56/52/9e/bb");
+  if (r2 > r1) {
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, r1, r2, "rgba:14/07/68/bb");
   }
 
+  r2 = r1;
+
   sum -= cpu[USER];
-  if (sum > 0.0f) {
 
-    r1 = R1 * std::sqrt(sum);
+  r1 = R1 * sqrtf(sum);
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r1, "rgba:af/ae/c4/bb");
+  if (r2 > r1) {
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, r1, r2, "rgba:56/52/9e/bb");
+  }
+
+  r2 = r1;
+
+  if (r2 > R0) {
+
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r2, "rgba:af/ae/c4/bb");
   }
 
   return 0;
@@ -469,8 +475,8 @@ int HandleBattery() {
 
   static const float width = 14;
 
-  static const char *colors[] = {"", "rgba:dd/dd/dd/dd", "rgba:ee/00/00/dd",
-                                 "rgba:ff/a5/00/dd"};
+  static const char *colors[] = {"", "rgba:dd/dd/dd/dd", "rgba:ff/a5/00/dd",
+                                 "rgba:ee/00/00/dd"};
 
   if (pmanager->battery.powerstate != ProcManager::PowerStates::Unknown) {
 
