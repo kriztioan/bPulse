@@ -262,7 +262,7 @@ int HandleCPU() {
 
   if (r2 > r1) {
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, r1, r2, "rgba:14/07/68/bb");
+    mwindow->DrawCircle(CEN_X, CEN_Y, roundf(r1), roundf(r2), "rgba:14/07/68/bb");
   }
 
   r2 = r1;
@@ -273,14 +273,14 @@ int HandleCPU() {
 
   if (r2 > r1) {
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, r1, r2, "rgba:56/52/9e/bb");
+    mwindow->DrawCircle(CEN_X, CEN_Y, roundf(r1), roundf(r2), "rgba:56/52/9e/bb");
   }
 
   r2 = r1;
 
   if (r2 > R0) {
 
-    mwindow->DrawCircle(CEN_X, CEN_Y, R0, r2, "rgba:af/ae/c4/bb");
+    mwindow->DrawCircle(CEN_X, CEN_Y, R0, roundf(r2), "rgba:af/ae/c4/bb");
   }
 
   return 0;
