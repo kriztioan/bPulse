@@ -97,14 +97,29 @@ int ManagedWindow::SetOpacity(float opacity) {
   return 0;
 }
 
+int ManagedWindow::SetColor(std::string &color) {
+
+  auto it = _xrendercolors.find(color);
+
+  if (it == _xrendercolors.end()) {
+
+    XRenderColor xrendercolor;
+
+    XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()),
+                      &xrendercolor);
+
+    it = _xrendercolors.insert({color, xrendercolor}).first;
+  }
+
+  XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &(it->second), 0, 0, 1, 1);
+
+  return 0;
+}
+
 int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
                            int angle2, std::string color) {
 
-  XRenderColor xrendercolor;
-
-  XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
-
-  XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
+  SetColor(color);
 
   return DrawRenderedArc(x, y, radius1, radius2, angle1, angle2);
 }
@@ -112,11 +127,7 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
                             std::string color) {
 
-  XRenderColor xrendercolor;
-
-  XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
-
-  XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
+  SetColor(color);
 
   return DrawRenderedLine(x1, y1, x2, y2, width);
 }
@@ -235,17 +246,18 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
     break;
   };
 
-  XRenderColor xrendercolor;
+  SetColor(color);
 
-  XRenderParseColor(xdisplay, const_cast<char *>(color.c_str()), &xrendercolor);
+  return DrawRenderedText(x, y, text);
+}
 
-  XRenderFillRectangle(xdisplay, PictOpSrc, xbrush, &xrendercolor, 0, 0, 1, 1);
+int ManagedWindow::DrawRenderedText(int x, int y, std::string text) {
 
-  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont, 0,
-                          0, x, y, text.c_str(), text.length());
+  XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont,
+                          0, 0, x, y, text.c_str(), text.length());
 
   return 0;
-}
+};
 
 int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
                                    int angle1, int angle2) {
