@@ -262,7 +262,7 @@ int ManagedWindow::DrawRenderedText(int x, int y, std::string text) {
 int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
                                    int angle1, int angle2) {
 
-  int nxpoints = ceil(0.5 * (angle2 - angle1) * radius2 * M_PI / 180.0);
+  int nxpoints = ceilf(0.5 * (angle2 - angle1) * radius2 * M_PI / 180.0);
 
   if (nxpoints < 4) {
     nxpoints = 4;
