@@ -126,7 +126,7 @@ int ProcManager::Probe() {
       }
     }
 
-    sscanf(line.c_str(), "%*d %*d %*s %*d %*d %lu %*d %*d %lu", &proc_io2.read, &proc_io2.write);
+    sscanf(line.c_str(), "%*d %*d %*s %*d %*d %lu %*d %*d %*d %lu", &proc_io2.read, &proc_io2.write);
 
     fstream.close();
 
