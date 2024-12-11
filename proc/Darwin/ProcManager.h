@@ -40,6 +40,10 @@
 
 #include <algorithm>
 
+#include <condition_variable>
+
+#include <thread>
+
 #include <CoreFoundation/CFString.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <IOKit/IOBSD.h>
@@ -115,6 +119,8 @@ public:
 
   ProcManager(int argc, char *argv[]);
 
+  ~ProcManager();
+
   int SetProcMask(int mask);
 
   int SetDisk(const char *path);
@@ -125,10 +131,14 @@ public:
 
   int SetIO(const char *io);
 
-  int Probe();
+  void Probe();
 
 private:
   int _init(int argc, char *argv[]);
+
+  int _probe();
+
+  void _probe_thread_func();
 
   int _mask;
 
@@ -155,6 +165,16 @@ private:
   std::string _io;
 
   std::string _host;
+
+  std::thread _probe_thread;
+
+  std::condition_variable _probe_condition;
+
+  std::mutex _probe_mutex;
+
+  bool _terminate_probe_thread = false;
+
+  bool _probe_execute = false;
 };
 
 inline int operator&(int a, ProcManager::Masks b) {

@@ -19,6 +19,12 @@ ProcManager::ProcManager(int argc, char *argv[]) {
     _init(argc, argv);
 }
 
+ProcManager::~ProcManager() {
+  _terminate_probe_thread = true;
+  _probe_condition.notify_one();
+  _probe_thread.join();
+}
+
 int ProcManager::_init(int argc, char *argv[]) {
 
   _mask = static_cast<int>(ProcManager::Masks::Ignore);
@@ -35,10 +41,31 @@ int ProcManager::_init(int argc, char *argv[]) {
 
   memset(&proc_io2, 0, sizeof(struct s_pio));
 
+  _probe_thread = std::thread(&ProcManager::_probe_thread_func, this);
+
   return 0;
 }
 
-int ProcManager::Probe() {
+void ProcManager::Probe() {
+  _probe_execute = true;
+  _probe_condition.notify_one();
+}
+
+void ProcManager::_probe_thread_func() {
+ while (true) {
+    std::unique_lock<std::mutex> lock(_probe_mutex);
+    _probe_condition.wait(lock, [&] { return _probe_execute || _terminate_probe_thread; });
+    if(_terminate_probe_thread) {
+       break;
+    }
+
+     _probe();
+
+    _probe_execute = false;
+  }
+}
+
+int ProcManager::_probe() {
 
   if(_mask & Masks::CPU) {
 
