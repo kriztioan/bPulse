@@ -8,7 +8,6 @@
  ***********************************************/
 
 #include "ManagedWindow.h"
-#include "X11/extensions/Xrender.h"
 
 ManagedWindow::ManagedWindow()
     : xicon(None), xiconmask(None), xblack({0, 0, 0, 0}) {}
@@ -97,7 +96,7 @@ int ManagedWindow::SetOpacity(float opacity) {
   return 0;
 }
 
-int ManagedWindow::SetColor(std::string &color) {
+int ManagedWindow::SetColor(const std::string &color) {
 
   auto it = _xrendercolors.find(color);
 
@@ -117,7 +116,7 @@ int ManagedWindow::SetColor(std::string &color) {
 }
 
 int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
-                           int angle2, std::string color) {
+                           int angle2, const std::string &color) {
 
   SetColor(color);
 
@@ -125,14 +124,14 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 }
 
 int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
-                            std::string color) {
+                            const std::string &color) {
 
   SetColor(color);
 
   return DrawRenderedLine(x1, y1, x2, y2, width);
 }
 
-int ManagedWindow::SetFont(std::string font, int size) {
+int ManagedWindow::SetFont(const std::string &font, int size) {
 
   if (_xfont) {
 
@@ -211,10 +210,12 @@ int ManagedWindow::SetFont(std::string font, int size) {
 
   FT_Done_Face(face);
 
+  FT_Done_FreeType(library);
+
   return 0;
 }
 
-int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
+int ManagedWindow::DrawText(int x, int y, std::string text, const std::string &color,
                             int align) {
 
   if (!_xfont) {
@@ -251,7 +252,7 @@ int ManagedWindow::DrawText(int x, int y, std::string text, std::string color,
   return DrawRenderedText(x, y, text);
 }
 
-int ManagedWindow::DrawRenderedText(int x, int y, std::string text) {
+int ManagedWindow::DrawRenderedText(int x, int y, const std::string &text) {
 
   XRenderCompositeString8(xdisplay, PictOpOver, xbrush, xcanvas, None, _xfont,
                           0, 0, x, y, text.c_str(), text.length());

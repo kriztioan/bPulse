@@ -123,6 +123,13 @@ int main(int argc, char *argv[], char **envp) {
       atoi(smanager->GetOptionForKey("ypos").c_str()), background->width,
       background->height, ehandler, background, icon);
 
+  if (!mwindow) {
+
+    printf("failed to create window\n");
+
+    exit(1);
+  }
+
   mwindow->SetFont(tmanager->GetOptionForKey("font"),
                    atoi(tmanager->GetOptionForKey("size").c_str()));
 

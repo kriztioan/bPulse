@@ -23,17 +23,17 @@ int ProcManager::_init(int argc, char *argv[]) {
 
   _mask = static_cast<int>(ProcManager::Masks::Ignore);
 
-  memset(&proc_cpu1, 0, sizeof(struct s_pcpu));
+  proc_cpu1 = {0};
 
-  memset(&proc_cpu2, 0, sizeof(struct s_pcpu));
+  proc_cpu2 = {0};
 
-  memset(&proc_eth1, 0, sizeof(struct s_peth));
+  proc_eth1 = {0};
 
-  memset(&proc_eth2, 0, sizeof(struct s_peth));
+  proc_eth2 = {0};
 
-  memset(&proc_io1, 0, sizeof(struct s_peth));
+  proc_io1 = {0};
 
-  memset(&proc_io2, 0, sizeof(struct s_pio));
+  proc_io2 = {0};
 
   _probe_thread = std::thread(&ProcManager::_probe_thread_func, this);
 
@@ -41,6 +41,11 @@ int ProcManager::_init(int argc, char *argv[]) {
 }
 
 void ProcManager::Probe() {
+  if (_probe_execute) {
+      std::unique_lock<std::mutex> lock(_probe_mutex);
+      _probe_condition.wait(lock, [&] { return !_probe_execute; });
+  }
+
   _probe_execute = true;
   _probe_condition.notify_one();
 }
@@ -56,6 +61,7 @@ void ProcManager::_probe_thread_func() {
      _probe();
 
     _probe_execute = false;
+    _probe_condition.notify_one();
   }
 }
 

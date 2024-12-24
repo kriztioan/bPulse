@@ -2,7 +2,7 @@
  *  @file   ManagedWindow.h
  *  @brief  Managed Window Class Definition
  *  @author KrizTioaN (christiaanboersma@hotmail.com)
- *  @date   2021-07-27
+ *  @date   2024-12-21
  *  @note   BSD-3 licensed
  *
  ***********************************************/
@@ -12,6 +12,7 @@
 
 #include <cmath>
 
+#include <array>
 #include <string>
 #include <unordered_map>
 
@@ -20,8 +21,8 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
-#include <X11/extensions/Xdbe.h>
-#include <X11/extensions/Xrender.h>
+#include <GL/gl.h>
+#include <GL/glx.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -32,6 +33,11 @@ namespace TEXT {
 enum ALIGN { LEFT = 0, CENTER, RIGHT };
 };
 
+struct _GLXFontInfo {
+  unsigned int width;
+  unsigned int height;
+};
+
 class ManagedWindow {
 
 public:
@@ -40,26 +46,26 @@ public:
   ~ManagedWindow();
 
   int DrawArc(int x, int y, int radius1, int radius2, int angle1, int angle2,
-              std::string color);
+              const std::string &color);
 
-  int DrawCircle(int x, int y, int radius1, int radius2, std::string color);
+  int DrawCircle(int x, int y, int radius1, int radius2, const std::string &color);
 
-  int DrawLine(int x1, int y1, int x2, int y2, int width, std::string color);
+  int DrawLine(int x1, int y1, int x2, int y2, int width, const std::string &color);
 
-  int DrawText(int x1, int y1, std::string text, std::string color,
+  int DrawText(int x1, int y1, std::string text, const std::string &color,
                int align = TEXT::ALIGN::LEFT);
 
   int SetOpacity(float opacity);
 
   bool SetAlwaysOnTop(bool state);
 
-  int SetFont(std::string font, int size);
+  int SetFont(const std::string &font, int size);
 
   int RenderLayer();
 
   int Sync();
 
-  int Scale(XFixed factor);
+  int Scale(float factor);
 
   std::string id; // for saving
 
@@ -67,17 +73,13 @@ public:
 
   Display *xdisplay;
 
+  GLXContext glxcontext;
+
   Window xwindow;
 
   Pixmap xicon, xiconmask;
 
-  Picture xbackground, xbrush, xcanvas, xpict;
-
-  XRenderColor xblack;
-
-  XdbeBackBuffer xbackbuffer;
-
-  XdbeSwapInfo xswapinfo;
+  unsigned char *xbackground = nullptr;
 
   int xx, xy, xwidth, xheight;
 
@@ -88,28 +90,26 @@ public:
   bool IsPaused() { return _paused; }
 
 private:
-  GlyphSet _xfont = None;
+  GLuint _glxfont;
 
-  XGlyphInfo *_xglyphinfo = nullptr;
+  _GLXFontInfo *_glxfontinfo = nullptr;
 
-  XRenderColor _clear = {0x0000, 0x0000, 0x0000, 0x0000};
-
-  std::unordered_map<std::string, XRenderColor> _xrendercolors;
+  std::unordered_map<std::string, std::array<unsigned char, 4>> _glxcolors;
 
   bool _paused = false;
 
-  int SetColor(std::string &color);
+  int SetColor(const std::string &color);
 
-  int DrawRenderedArc(int x, int y, int radius1, int radius2, int angle1,
-                      int angle2);
+  int DrawGLXArc(int x, int y, int radius1, int radius2, int angle1,
+                 int angle2);
 
-  int DrawRenderedLine(int x1, int y1, int x2, int y2, int width);
+  int DrawGLXLine(int x1, int y1, int x2, int y2, int width);
 
-  int DrawRenderedText(int x, int y, std::string text);
+  int DrawGLXText(int x, int y, const std::string &text);
 };
 
 inline int ManagedWindow::DrawCircle(int x, int y, int radius1, int radius2,
-                                     std::string color) {
+                                     const std::string &color) {
 
   return DrawArc(x, y, radius1, radius2, 0, 360, color);
 }
