@@ -15,13 +15,13 @@ Running `bPulse` on `MaOS` requires that the [XQuartz](https://www.xquartz.org) 
 `bPulse`  is compiled with:
 
 ```shell
-make -USE_XRender=1
+make USE_XRender=1
 ```
 
 to use the `Xrender` backend or
 
 ```shell
-make -USE_GLX=1
+make USE_GLX=1
 ```
 
 to use the `GLX` backend for drawing graphics.
