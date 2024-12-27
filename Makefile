@@ -2,11 +2,11 @@ PROG:=bpulse
 PLATFORM:=$(shell uname -s)
 PLATFORM_DIR:=proc/$(PLATFORM)
 ifeq ($(USE_GLX),1)
-	GFX_DIR:=GLX
+	GFX_DIR:=gfx/GLX
 	LIBS:=-lGL
 else
 ifeq ($(USE_XRENDER),1)
-	GFX_DIR:=XRender
+	GFX_DIR:=gfx/XRender
 	LIBS:=-lXrender
 else
 $(error Specify USE_GLX=1 or USE_XRENDER=1 to select a graphics backend)

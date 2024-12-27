@@ -303,7 +303,7 @@ int HandleDate() {
 
   strftime(month, 4, "%b", tm_s);
 
-  mwindow->DrawText(CEN_X + R2, CEN_Y, day, "rgba:00/00/ff/bb");
+  mwindow->DrawText(CEN_X + R3, CEN_Y, day, "rgba:00/00/ff/bb", TEXT::ALIGN::RIGHT);
 
   mwindow->DrawText(CEN_X - R3, CEN_Y, month, "rgba:00/00/ff/bb");
 
@@ -474,7 +474,7 @@ int HandleUser() {
                       "rgba:aa/aa/aa/bb", TEXT::ALIGN::CENTER);
 
     mwindow->DrawText(CEN_X, CEN_Y + 24, std::to_string(pmanager->users.size()),
-                      "rgba:aa/aa/aa/bb", TEXT::ALIGN::LEFT);
+                      "rgba:aa/aa/aa/bb", TEXT::ALIGN::CENTER);
   }
 
   return 0;

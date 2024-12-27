@@ -8,7 +8,6 @@
  ***********************************************/
 
 #include "ManagedWindow.h"
-#include "GL/gl.h"
 
 ManagedWindow::ManagedWindow() : xicon(None), xiconmask(None) {}
 
@@ -16,10 +15,17 @@ ManagedWindow::~ManagedWindow() {
 
   if (xbackground) {
 
-    delete xbackground;
+    glDeleteTextures(1, &xbackground);
   }
 
   if (_glxfontinfo) {
+
+    for (char ch = ' '; ch <= '~'; ch++) {
+
+      glDeleteTextures(1, &(_glxfontinfo[ch - ' '].texture));
+    }
+
+    glDeleteLists(_glxfont, '~' - ' ' + 1);
 
     delete[] _glxfontinfo;
   }
@@ -50,11 +56,29 @@ int ManagedWindow::Sync() {
 
   if (xbackground) {
 
-    glBlendFunc(GL_ONE, GL_ONE);
+    glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-    glRasterPos2i(0, xheight);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                        GL_ONE_MINUS_SRC_ALPHA);
 
-    glDrawPixels(xwidth, xheight, GL_RGBA, GL_UNSIGNED_BYTE, xbackground);
+    glLoadIdentity();
+
+    glTranslatef(0.0f, 0.0f, 0.0f);
+
+    glBindTexture(GL_TEXTURE_2D, xbackground);
+
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.f, 0.f);
+    glVertex2f(0.f, 0.f);
+    glTexCoord2f(1.f, 0.f);
+    glVertex2f(xwidth, 0.f);
+    glTexCoord2f(1.f, 1.f);
+    glVertex2f(xwidth, xheight);
+    glTexCoord2f(0.f, 1.f);
+    glVertex2f(0.f, xheight);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
   }
 
   return 0;
@@ -117,7 +141,8 @@ int ManagedWindow::DrawArc(int x, int y, int radius1, int radius2, int angle1,
 
   SetColor(color);
 
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                      GL_ONE_MINUS_SRC_ALPHA);
 
   return DrawGLXArc(x, y, radius1, radius2, angle1, angle2);
 }
@@ -180,7 +205,8 @@ int ManagedWindow::DrawLine(int x1, int y1, int x2, int y2, int width,
 
   SetColor(color);
 
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                      GL_ONE_MINUS_SRC_ALPHA);
 
   return DrawGLXLine(x1, y1, x2, y2, width);
 }
@@ -226,7 +252,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
       return 1;
     }
 
-    _glxfontinfo[ch - ' '].width = face->glyph->bitmap.width;
+    _glxfontinfo[ch - ' '].width = face->glyph->advance.x / 64.0;
 
     _glxfontinfo[ch - ' '].height = face->glyph->bitmap.rows;
 
@@ -238,21 +264,45 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
         buffer[2 * (col + row * face->glyph->bitmap.width)] =
             buffer[2 * (col + row * face->glyph->bitmap.width) + 1] =
                 face->glyph->bitmap
-                    .buffer[col + face->glyph->bitmap.width *
-                                      (face->glyph->bitmap.rows - row - 1)];
+                    .buffer[col + face->glyph->bitmap.width * row];
       }
     }
 
-    int yoffset = face->glyph->bitmap_top - face->glyph->bitmap.rows;
+    glGenTextures(1, &_glxfontinfo[ch - ' '].texture);
+
+    glBindTexture(GL_TEXTURE_2D, _glxfontinfo[ch - ' '].texture);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, face->glyph->bitmap.width,
+                 face->glyph->bitmap.rows, 0, GL_LUMINANCE_ALPHA,
+                 GL_UNSIGNED_BYTE, buffer);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    int yoffset = face->glyph->bitmap.rows;
 
     glNewList(_glxfont + ch, GL_COMPILE);
 
-    glBitmap(0, 0, 0, 0, -face->glyph->bitmap_left, yoffset, NULL);
+    glTranslatef(face->glyph->bitmap_left, -yoffset, 0);
 
-    glDrawPixels(face->glyph->bitmap.width, face->glyph->bitmap.rows,
-                 GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, buffer);
+    glBindTexture(GL_TEXTURE_2D, _glxfontinfo[ch - ' '].texture);
 
-    glBitmap(0, 0, 0, 0, face->glyph->advance.x / 64.0, -yoffset, NULL);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0.f, 0.f);
+    glVertex2f(0.f, 0.f);
+    glTexCoord2f(1.f, 0.f);
+    glVertex2f(_glxfontinfo[ch - ' '].width, 0.f);
+    glTexCoord2f(1.f, 1.f);
+    glVertex2f(_glxfontinfo[ch - ' '].width, _glxfontinfo[ch - ' '].height);
+    glTexCoord2f(0.f, 1.f);
+    glVertex2f(0.f, _glxfontinfo[ch - ' '].height);
+    glEnd();
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    glTranslatef(-face->glyph->bitmap_left + face->glyph->advance.x / 64.0,
+                 yoffset, 0);
 
     glEndList();
   }
@@ -302,9 +352,9 @@ int ManagedWindow::DrawText(int x, int y, std::string text,
 
 int ManagedWindow::DrawGLXText(int x, int y, const std::string &text) {
 
-  glBlendFunc(GL_CONSTANT_COLOR, GL_ONE_MINUS_SRC_ALPHA);
+  glLoadIdentity();
 
-  glRasterPos2f(x, y);
+  glTranslatef(x, y, 0);
 
   glPushAttrib(GL_LIST_BIT);
 
@@ -316,16 +366,29 @@ int ManagedWindow::DrawGLXText(int x, int y, const std::string &text) {
   glPopAttrib();
 
   return 0;
-};
+}
 
 int ManagedWindow::DrawGLXLine(int x1, int y1, int x2, int y2, int width) {
 
-  glLineWidth(width);
+  float angle = atan2f(y2 - y1, x2 - x1),
+        radius = sqrtf((y2 - y1) * (y2 - y1) + (x2 - x1) * (x2 - x1)),
+        sina = sinf(angle), cosa = cosf(angle), hwsina = width * sina / 2.0,
+        hwcosa = width * cosa / 2.0;
 
-  glBegin(GL_LINES);
-  glVertex2i(x1, y1);
-  glVertex2i(x2, y2);
-  glEnd();
+  GLfloat glxpoints[] = {x1 - hwsina,
+                         y1 + hwcosa,
+                         x1 + hwsina,
+                         y1 - hwcosa,
+                         x1 + radius * cosa - hwsina,
+                         y1 + radius * sina + hwcosa,
+                         x1 + radius * cosa + hwsina,
+                         y1 + radius * sina - hwcosa};
+
+  glLoadIdentity();
+
+  glVertexPointer(2, GL_FLOAT, 0, glxpoints);
+
+  glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
   return 0;
 }

@@ -21,8 +21,10 @@
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
-#include <GL/gl.h>
+#define GL_GLEXT_PROTOTYPES 1
+#include "GL/gl.h"
 #include <GL/glx.h>
+#include "GL/glext.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -34,6 +36,7 @@ enum ALIGN { LEFT = 0, CENTER, RIGHT };
 };
 
 struct _GLXFontInfo {
+  GLuint texture;
   unsigned int width;
   unsigned int height;
 };
@@ -79,7 +82,7 @@ public:
 
   Pixmap xicon, xiconmask;
 
-  unsigned char *xbackground = nullptr;
+  GLuint xbackground = 0;
 
   int xx, xy, xwidth, xheight;
 

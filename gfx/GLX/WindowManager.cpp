@@ -277,13 +277,6 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
   if (background != nullptr) {
 
     Image2XPixmap(background, &xbackground, &xbackgroundmask);
-
-    size_t nbytes =
-        background->width * background->height * background->channels;
-
-    mwindow->xbackground = new unsigned char[nbytes];
-
-    memcpy(mwindow->xbackground, background->data, nbytes);
   }
 
   XSetWindowAttributes xwindowattributes;
@@ -495,6 +488,8 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   glMatrixMode(GL_MODELVIEW);
 
+  glLoadIdentity();
+
   glClearColor(0.0, 0.0, 0.0, 0.0);
 
   glEnable(GL_BLEND);
@@ -508,6 +503,25 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
   glEnable(GL_LINE_SMOOTH);
 
   glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+
+  glEnable(GL_TEXTURE_2D);
+
+  if (background != nullptr) {
+
+    glGenTextures(1, &mwindow->xbackground);
+
+    glBindTexture(GL_TEXTURE_2D, mwindow->xbackground);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, background->width,
+                 background->height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 background->data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+  }
 
   _mwindows.push_back(std::move(mwindow));
 
