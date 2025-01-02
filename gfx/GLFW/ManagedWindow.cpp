@@ -2,14 +2,14 @@
  *  @file   ManagedWindow.cpp
  *  @brief  Managed Window Class Implementation
  *  @author KrizTioaN (christiaanboersma@hotmail.com)
- *  @date   2024-12-21
+ *  @date   2024-12-29
  *  @note   BSD-3 licensed
  *
  ***********************************************/
 
 #include "ManagedWindow.h"
 
-ManagedWindow::ManagedWindow() : xicon(None), xiconmask(None) {}
+ManagedWindow::ManagedWindow() {}
 
 ManagedWindow::~ManagedWindow() {
 
@@ -30,15 +30,15 @@ ManagedWindow::~ManagedWindow() {
     delete[] _glxfontinfo;
   }
 
-  glXDestroyContext(xdisplay, glxcontext);
+  if (xcursor) {
 
-  XFreePixmap(xdisplay, xicon);
+    glfwDestroyCursor(xcursor);
+  }
 
-  XFreePixmap(xdisplay, xiconmask);
+  if (xwindow) {
 
-  XUnmapWindow(xdisplay, xwindow);
-
-  XDestroyWindow(xdisplay, xwindow);
+    glfwDestroyWindow(xwindow);
+  }
 }
 
 int ManagedWindow::Scale(float factor) {
@@ -50,13 +50,11 @@ int ManagedWindow::Scale(float factor) {
 
 int ManagedWindow::Sync() {
 
-  glXSwapBuffers(xdisplay, xwindow);
+  glfwSwapBuffers(xwindow);
 
   glClear(GL_COLOR_BUFFER_BIT);
 
   if (xbackground) {
-
-    glBindTexture(GL_TEXTURE_2D, xbackground);
 
     glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
@@ -67,15 +65,17 @@ int ManagedWindow::Sync() {
 
     glTranslatef(0.0f, 0.0f, 0.0f);
 
+    glBindTexture(GL_TEXTURE_2D, xbackground);
+
     glBegin(GL_QUADS);
-    glTexCoord2f(0.0f, 0.0f);
-    glVertex2f(0.0f, 0.0f);
-    glTexCoord2f(1.0f, 0.0f);
-    glVertex2f(xwidth, 0.0f);
-    glTexCoord2f(1.0f, 1.0f);
+    glTexCoord2f(0.f, 0.f);
+    glVertex2f(0.f, 0.f);
+    glTexCoord2f(1.f, 0.f);
+    glVertex2f(xwidth, 0.f);
+    glTexCoord2f(1.f, 1.f);
     glVertex2f(xwidth, xheight);
-    glTexCoord2f(0.0f, 1.0f);
-    glVertex2f(0.0f, xheight);
+    glTexCoord2f(0.f, 1.f);
+    glVertex2f(0.f, xheight);
     glEnd();
 
     glBindTexture(GL_TEXTURE_2D, 0);
@@ -93,20 +93,10 @@ int ManagedWindow::RenderLayer() {
 
 int ManagedWindow::SetOpacity(float opacity) {
 
-  Atom wmOpacity = XInternAtom(xdisplay, "_NET_WM_WINDOW_OPACITY", false);
+  if (xwindow) {
 
-  union {
-    unsigned int opacity;
-    unsigned char rgba[4];
-  } property;
-
-  for (int i = 0; i < 4; i++) {
-
-    property.rgba[i] = (unsigned int)(opacity * 255.0f);
+    glfwSetWindowOpacity(xwindow, opacity);
   }
-
-  XChangeProperty(xdisplay, xwindow, wmOpacity, XA_CARDINAL, 32,
-                  PropModeReplace, (unsigned char *)&property.opacity, 1L);
 
   return 0;
 }
@@ -392,28 +382,13 @@ int ManagedWindow::DrawGLXLine(int x1, int y1, int x2, int y2, int width) {
 
 bool ManagedWindow::SetAlwaysOnTop(bool state) {
 
-  Atom netWmState = XInternAtom(xdisplay, "_NET_WM_STATE", 1),
-       netWmStateAbove = XInternAtom(xdisplay, "_NET_WM_STATE_ABOVE", 1);
+  if (xwindow) {
 
-  if (netWmStateAbove != None && netWmState != None) {
-    XClientMessageEvent xclient;
-    bzero(&xclient, sizeof(XClientMessageEvent));
-    xclient.type = ClientMessage;
-    xclient.window = xwindow;
-    xclient.message_type = netWmState;
-    xclient.format = 32;
-    xclient.data.l[0] = state;
-    xclient.data.l[1] = netWmStateAbove;
-    xclient.data.l[2] = 0;
-    xclient.data.l[3] = 0;
-    xclient.data.l[4] = 0;
+    glfwSetWindowAttrib(xwindow, GLFW_FLOATING, state ? GLFW_TRUE : GLFW_FALSE);
+  } else {
 
-    XSendEvent(xdisplay, DefaultRootWindow(xdisplay), false,
-               SubstructureRedirectMask | SubstructureNotifyMask,
-               (XEvent *)&xclient);
-
-    return true;
+    glfwWindowHint(GLFW_FLOATING, state ? GLFW_TRUE : GLFW_FALSE);
   }
 
-  return false;
+  return true;
 }

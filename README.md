@@ -2,11 +2,17 @@
 
 `bPulse` is an [iPulse](https://ipulseapp.com)-inspired (by
 [iconfactory](https://iconfactory.com)) graphical system monitoring tool for
-`Linux` and `MacOS`. It is written in `C++` and relies on `X11`, `X11's Shape
-Extension`, `X11's Back-buffer Extension`, `libpng`, and `FreeType` fonts.
-Either `GLX` or `Xrender` can be selected as the drawing backend. `bPulse` is capable of monitoring CPU, memory, disk-I/O, network-I/O, disk usage, users logged in, and keep track of the date and time.
+`Linux` and `MacOS`. It is written in `C++` and can run directly under `X11` or
+through [`GLFW`](https://glfw.org). Running directly under `X11`, either `GLX`
+or `Xrender` can be selected as the drawing backend and  relies on 
+`X11's Shape Extension` and `X11's Back-buffer Extension`. `bPulse` further
+relies on `libpng` and [`FreeType`](https://freetype.org) for font loading and
+ rendering. `bPulse` monitors CPU, memory, disk-I/O, network-I/O, disk usage,
+ users logged in, and keep track of the date and time.
 
-Running `bPulse` on `MaOS` requires that the [XQuartz](https://www.xquartz.org) `X11` window manager is installed.
+Running `bPulse` directly under `X11` on `MaOS` requires that
+[XQuartz](https://www.xquartz.org) installed. Running under `GLFW` has no such
+requirement.
 
 ![bPulse in Action](bPulse.png "bPulse in Action")
 
@@ -18,13 +24,19 @@ Running `bPulse` on `MaOS` requires that the [XQuartz](https://www.xquartz.org) 
 make USE_XRender=1
 ```
 
-to use the `Xrender` backend or
+to use the `Xrender` backend,
 
 ```shell
 make USE_GLX=1
 ```
 
-to use the `GLX` backend for drawing graphics.
+to use the `GLX` backend for drawing graphics, or
+
+```shell
+make USE_GLFW=1
+```
+
+to use the `GLFW` backend for drawing graphics.
 
 This results in a binary executable called `bpulse`, which can be invoked as follows:
 
@@ -39,7 +51,8 @@ This results in a binary executable called `bpulse`, which can be invoked as fol
 ## Notes
 
 1. On `MacOS` XCode and the developer tools needs to be installed.
-2. Both `Linux` and `MacOS` require `libpng`.
+2. Both `Linux` and `MacOS` require `libpng` and `FreeType`.
+3. Running under `GLFW` requires version 3.4 or higher to be installed.
 
 ## BSD-3 License
 

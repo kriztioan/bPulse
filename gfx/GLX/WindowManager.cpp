@@ -8,6 +8,7 @@
  ***********************************************/
 
 #include "WindowManager.h"
+#include "GL/gl.h"
 #include "GL/glx.h"
 #include "ManagedWindow.h"
 #include "X11/X.h"
@@ -494,6 +495,8 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   glEnable(GL_BLEND);
 
+  glDisable(GL_DEPTH_TEST);
+
   glEnableClientState(GL_VERTEX_ARRAY);
 
   glEnable(GL_POLYGON_SMOOTH);
@@ -513,7 +516,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
     glBindTexture(GL_TEXTURE_2D, mwindow->xbackground);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, background->width,
-                 background->height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                 background->height, 0, GL_BGRA, GL_UNSIGNED_BYTE,
                  background->data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

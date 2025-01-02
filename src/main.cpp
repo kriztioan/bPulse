@@ -63,6 +63,8 @@ time_t t;
 
 struct tm *tm_s;
 
+float CEN_X, CEN_Y, R0, R1, R2, R3, R4;
+
 int main(int argc, char *argv[], char **envp) {
 
   smanager = new SettingsManager(argc, argv);
@@ -129,6 +131,20 @@ int main(int argc, char *argv[], char **envp) {
 
     exit(1);
   }
+
+  CEN_X = background->width / 2.0;
+
+  CEN_Y = background->height / 2.0;
+
+  R0 = 0.0;
+
+  R1 = R0 + CEN_X * 30.0 / 64.0;
+
+  R2 = R1 + CEN_X * 1.0 / 3.2;
+
+  R3 = R2 + CEN_X * 1.0 / 6.4;
+
+  R4 = R3 + CEN_X * 1.0 / 16.0;
 
   mwindow->SetFont(tmanager->GetOptionForKey("font"),
                    atoi(tmanager->GetOptionForKey("size").c_str()));
@@ -303,7 +319,8 @@ int HandleDate() {
 
   strftime(month, 4, "%b", tm_s);
 
-  mwindow->DrawText(CEN_X + R3, CEN_Y, day, "rgba:00/00/ff/bb", TEXT::ALIGN::RIGHT);
+  mwindow->DrawText(CEN_X + R3, CEN_Y, day, "rgba:00/00/ff/bb",
+                    TEXT::ALIGN::RIGHT);
 
   mwindow->DrawText(CEN_X - R3, CEN_Y, month, "rgba:00/00/ff/bb");
 

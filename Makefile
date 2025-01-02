@@ -1,6 +1,10 @@
 PROG:=bpulse
 PLATFORM:=$(shell uname -s)
 PLATFORM_DIR:=proc/$(PLATFORM)
+ifeq ($(USE_GLFW),1)
+	GFX_DIR:=gfx/GLFW
+	LIBS:=-lglfw -lGL -lGLEW
+else
 ifeq ($(USE_GLX),1)
 	GFX_DIR:=gfx/GLX
 	LIBS:=-lGL
@@ -9,7 +13,8 @@ ifeq ($(USE_XRENDER),1)
 	GFX_DIR:=gfx/XRender
 	LIBS:=-lXrender
 else
-$(error Specify USE_GLX=1 or USE_XRENDER=1 to select a graphics backend)
+$(error Specify USE_GLFW=1, USE_GLX=1, or USE_XRENDER=1 to select a graphics backend)
+endif
 endif
 endif
 SRC_DIR:=src
@@ -22,10 +27,10 @@ CPPFLAGS:=-std=c++17 -O3 -I./include -I$(PLATFORM_DIR) -I$(GFX_DIR)
 LIBS+=-lpng -lX11 -lXext -lfreetype
 FRAMEWORKS:=
 ifeq ($(PLATFORM),Darwin)
-	CPPFLAGS+=-I /usr/local/include/freetype2
-	FRAMEWORKS+=-framework IOKit -framework Foundation
+	CPPFLAGS+=-I/usr/local/include/freetype2
+	FRAMEWORKS+=-framework IOKit -framework Foundation -framework OpenGL
 else
-	CPPFLAGS+=-I /usr/include/freetype2
+	CPPFLAGS+=-I/usr/include/freetype2
 endif
 
 $(PROG): $(OBJ_FILES)

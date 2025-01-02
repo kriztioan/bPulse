@@ -16,16 +16,13 @@
 #include <string>
 #include <unordered_map>
 
+#include <algorithm>
 #include <functional>
 
-#include <X11/Xatom.h>
-#include <X11/Xlib.h>
-
-#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glew.h>
+#define GL_SILENCE_DEPRECATION
+#include <GLFW/glfw3.h>
 #include <GL/gl.h>
-#include <GL/glx.h>
-#include "GL/glext.h"
-
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -51,9 +48,11 @@ public:
   int DrawArc(int x, int y, int radius1, int radius2, int angle1, int angle2,
               const std::string &color);
 
-  int DrawCircle(int x, int y, int radius1, int radius2, const std::string &color);
+  int DrawCircle(int x, int y, int radius1, int radius2,
+                 const std::string &color);
 
-  int DrawLine(int x1, int y1, int x2, int y2, int width, const std::string &color);
+  int DrawLine(int x1, int y1, int x2, int y2, int width,
+               const std::string &color);
 
   int DrawText(int x1, int y1, std::string text, const std::string &color,
                int align = TEXT::ALIGN::LEFT);
@@ -74,17 +73,17 @@ public:
 
   std::function<WindowEvents(WindowEvent *)> EventHandler;
 
-  Display *xdisplay;
+  GLFWwindow *xwindow = nullptr;
 
-  GLXContext glxcontext;
-
-  Window xwindow;
-
-  Pixmap xicon, xiconmask;
+  GLFWcursor *xcursor = nullptr;
 
   GLuint xbackground = 0;
 
   int xx, xy, xwidth, xheight;
+
+  bool _mouse_down = false;
+
+  double mouse_x, mouse_y;
 
   void Pause() { _paused = true; }
 
