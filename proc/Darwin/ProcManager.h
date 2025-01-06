@@ -69,17 +69,17 @@ public:
 
   enum class Masks {
     Ignore = 0L,
-    CPU,
-    Mem,
-    IO,
-    Eth,
-    EMail,
-    Disk,
-    Alarm,
-    Host,
-    Users,
-    Battery,
-    All = 512L
+    CPU = 1L,
+    Mem = 1L << 2,
+    IO = 1L << 3,
+    Eth = 1L << 4,
+    EMail = 1L << 5,
+    Disk = 1L << 6,
+    Alarm = 1L << 7,
+    Host = 1L << 8,
+    Users = 1L << 9,
+    Battery = 1L << 10,
+    All = 1L << 12 
   };
 
   struct s_cpu {
