@@ -14,8 +14,11 @@ ProcManager::ProcManager() { _init(0, nullptr); }
 ProcManager::ProcManager(int argc, char *argv[]) { _init(argc, argv); }
 
 ProcManager::~ProcManager() {
+
   _terminate_probe_thread = true;
+
   _probe_condition.notify_one();
+
   _probe_thread.join();
 }
 
@@ -41,20 +44,28 @@ int ProcManager::_init(int argc, char *argv[]) {
 }
 
 void ProcManager::Probe() {
+
   if (_probe_execute) {
+
     std::unique_lock<std::mutex> lock(_probe_mutex);
+
     _probe_condition.wait(lock, [&] { return !_probe_execute; });
   }
 
   _probe_execute = true;
+
   _probe_condition.notify_one();
 }
 
 void ProcManager::_probe_thread_func() {
+
   while (true) {
+
     std::unique_lock<std::mutex> lock(_probe_mutex);
+
     _probe_condition.wait(
         lock, [&] { return _probe_execute || _terminate_probe_thread; });
+
     if (_terminate_probe_thread) {
       break;
     }
@@ -62,6 +73,7 @@ void ProcManager::_probe_thread_func() {
     _probe();
 
     _probe_execute = false;
+
     _probe_condition.notify_one();
   }
 }
@@ -95,19 +107,20 @@ int ProcManager::_probe() {
     proc_cpu2.total =
         proc_cpu2.user + proc_cpu2.nice + proc_cpu2.sys + proc_cpu2.idle;
 
-    cpu.user = static_cast<float>(proc_cpu2.user - proc_cpu1.user) /
-               (proc_cpu2.total - proc_cpu1.total);
+    float diff = proc_cpu2.total - proc_cpu1.total;
 
-    cpu.nice = static_cast<float>(proc_cpu2.nice - proc_cpu1.nice) /
-               (proc_cpu2.total - proc_cpu1.total);
+    if (diff > 0.0f) {
 
-    cpu.sys = static_cast<float>(proc_cpu2.sys - proc_cpu1.sys) /
-              (proc_cpu2.total - proc_cpu1.total);
+      cpu.user = (proc_cpu2.user - proc_cpu1.user) / diff;
 
-    cpu.idle = static_cast<float>(proc_cpu2.idle - proc_cpu1.idle) /
-               (proc_cpu2.total - proc_cpu1.total);
+      cpu.nice = (proc_cpu2.nice - proc_cpu1.nice) / diff;
 
-    proc_cpu1 = proc_cpu2;
+      cpu.sys = (proc_cpu2.sys - proc_cpu1.sys) / diff;
+
+      cpu.idle = (proc_cpu2.idle - proc_cpu1.idle) / diff;
+
+      proc_cpu1 = proc_cpu2;
+    }
   }
 
   if (_mask & Masks::Eth) {
@@ -250,6 +263,7 @@ int ProcManager::_probe() {
 
     // Do battery
     battery.level = -1;
+
     battery.powerstate = PowerStates::Unknown;
   }
 

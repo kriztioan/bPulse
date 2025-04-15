@@ -14,8 +14,11 @@ ProcManager::ProcManager() { _init(0, nullptr); }
 ProcManager::ProcManager(int argc, char *argv[]) { _init(argc, argv); }
 
 ProcManager::~ProcManager() {
+
   _terminate_probe_thread = true;
+
   _probe_condition.notify_one();
+
   _probe_thread.join();
 }
 
@@ -41,26 +44,36 @@ int ProcManager::_init(int argc, char *argv[]) {
 }
 
 void ProcManager::Probe() {
+
   if (_probe_execute) {
-      std::unique_lock<std::mutex> lock(_probe_mutex);
-      _probe_condition.wait(lock, [&] { return !_probe_execute; });
+
+    std::unique_lock<std::mutex> lock(_probe_mutex);
+    _probe_condition.wait(lock, [&] { return !_probe_execute; });
   }
 
   _probe_execute = true;
+
   _probe_condition.notify_one();
 }
 
 void ProcManager::_probe_thread_func() {
- while (true) {
+
+  while (true) {
+
     std::unique_lock<std::mutex> lock(_probe_mutex);
-    _probe_condition.wait(lock, [&] { return _probe_execute || _terminate_probe_thread; });
-    if(_terminate_probe_thread) {
-       break;
+
+    _probe_condition.wait(
+        lock, [&] { return _probe_execute || _terminate_probe_thread; });
+
+    if (_terminate_probe_thread) {
+
+      break;
     }
 
-     _probe();
+    _probe();
 
     _probe_execute = false;
+
     _probe_condition.notify_one();
   }
 }
@@ -87,31 +100,35 @@ int ProcManager::_probe() {
 
         proc_cpu2.user +=
             static_cast<float>(cpu_info[ncpu].cpu_ticks[CPU_STATE_USER]);
+
         proc_cpu2.nice +=
             static_cast<float>(cpu_info[ncpu].cpu_ticks[CPU_STATE_NICE]);
+
         proc_cpu2.sys +=
             static_cast<float>(cpu_info[ncpu].cpu_ticks[CPU_STATE_SYSTEM]);
+
         proc_cpu2.idle +=
             static_cast<float>(cpu_info[ncpu].cpu_ticks[CPU_STATE_IDLE]);
       }
+
+      proc_cpu2.total =
+          proc_cpu2.user + proc_cpu2.nice + proc_cpu2.sys + proc_cpu2.idle;
+
+      float diff = proc_cpu2.total - proc_cpu1.total;
+
+      if (diff > 0.0f) {
+
+        cpu.user = (proc_cpu2.user - proc_cpu1.user) / diff;
+
+        cpu.nice = (proc_cpu2.nice - proc_cpu1.nice) / diff;
+
+        cpu.sys = (proc_cpu2.sys - proc_cpu1.sys) / diff;
+
+        cpu.idle = (proc_cpu2.idle - proc_cpu1.idle) / diff;
+
+        proc_cpu1 = proc_cpu2;
+      }
     }
-
-    proc_cpu2.total =
-        proc_cpu2.user + proc_cpu2.nice + proc_cpu2.sys + proc_cpu2.idle;
-
-    cpu.user = static_cast<float>(proc_cpu2.user - proc_cpu1.user) /
-               (proc_cpu2.total - proc_cpu1.total);
-
-    cpu.nice = static_cast<float>(proc_cpu2.nice - proc_cpu1.nice) /
-               (proc_cpu2.total - proc_cpu1.total);
-
-    cpu.sys = static_cast<float>(proc_cpu2.sys - proc_cpu1.sys) /
-              (proc_cpu2.total - proc_cpu1.total);
-
-    cpu.idle = static_cast<float>(proc_cpu2.idle - proc_cpu1.idle) /
-               (proc_cpu2.total - proc_cpu1.total);
-
-    proc_cpu1 = proc_cpu2;
   }
 
   if (_mask & Masks::Eth) {
@@ -124,7 +141,7 @@ int ProcManager::_probe() {
 
     if (0 == sysctl(mib, sizeof(mib) / sizeof(int), NULL, &n, NULL, 0)) {
 
-      char *records = (char *)malloc(n), *record;
+      char *records = (char *)malloc(n * sizeof(struct if_msghdr2)), *record;
 
       if (0 == sysctl(mib, sizeof(mib) / sizeof(int), records, &n, NULL, 0)) {
 
@@ -143,6 +160,7 @@ int ProcManager::_probe() {
           }
 
           proc_eth2.received = if_msghdr2_s.ifm_data.ifi_ibytes;
+
           proc_eth2.sent = if_msghdr2_s.ifm_data.ifi_obytes;
         }
       }
@@ -172,87 +190,74 @@ int ProcManager::_probe() {
 
     if (status == KERN_SUCCESS) {
 
-      CFMutableDictionaryRef match = IOServiceMatching("IOMedia");
+      io_registry_entry_t parent, drive;
 
-      CFDictionaryAddValue(match, CFSTR(kIOMediaWholeKey), kCFBooleanTrue);
+      CFNumberRef nValue;
 
-      io_iterator_t drive_list;
+      long io_read, io_write, io_read_total = 0L, io_write_total = 0L;
 
-      kern_return_t status =
-          IOServiceGetMatchingServices(master_port, match, &drive_list);
+      memset(&proc_io2, 0, sizeof(struct s_pio));
 
-      if (status == KERN_SUCCESS) {
+      while ((drive = IOIteratorNext(drive_list))) {
 
-        io_registry_entry_t parent, drive;
+        status = IORegistryEntryGetParentEntry(drive, kIOServicePlane, &parent);
 
-        CFNumberRef nValue;
+        if (status == KERN_SUCCESS) {
 
-        long io_read, io_write, io_read_total = 0L, io_write_total = 0L;
+          if (IOObjectConformsTo(parent, "IOBlockStorageDriver")) {
 
-        memset(&proc_io2, 0, sizeof(struct s_pio));
+            CFMutableDictionaryRef properties;
 
-        while ((drive = IOIteratorNext(drive_list))) {
+            CFDictionaryRef stats;
 
-          status =
-              IORegistryEntryGetParentEntry(drive, kIOServicePlane, &parent);
+            status = IORegistryEntryCreateCFProperties(
+                parent, (CFMutableDictionaryRef *)&properties,
+                kCFAllocatorDefault, kNilOptions);
 
-          if (status == KERN_SUCCESS) {
-
-            if (IOObjectConformsTo(parent, "IOBlockStorageDriver")) {
-
-              CFMutableDictionaryRef properties;
-
-              CFDictionaryRef stats;
-
-              status = IORegistryEntryCreateCFProperties(
-                  parent, (CFMutableDictionaryRef *)&properties,
-                  kCFAllocatorDefault, kNilOptions);
-
-              if (status != KERN_SUCCESS) {
-
-                IOObjectRelease(parent);
-
-                IOObjectRelease(drive);
-
-                CFRelease(properties);
-
-                continue;
-              }
-
-              stats = (CFDictionaryRef)CFDictionaryGetValue(
-                  properties, CFSTR(kIOBlockStorageDriverStatisticsKey));
-
-              if (!stats) {
-
-                IOObjectRelease(parent);
-
-                IOObjectRelease(drive);
-
-                CFRelease(properties);
-
-                continue;
-              }
-
-              nValue = (CFNumberRef)CFDictionaryGetValue(
-                  stats, CFSTR(kIOBlockStorageDriverStatisticsBytesReadKey));
-
-              CFNumberGetValue(nValue, kCFNumberSInt64Type, &io_read);
-
-              proc_io2.read += io_read;
-
-              nValue = (CFNumberRef)CFDictionaryGetValue(
-                  stats, CFSTR(kIOBlockStorageDriverStatisticsBytesWrittenKey));
-
-              CFNumberGetValue(nValue, kCFNumberSInt64Type, &io_write);
-
-              proc_io2.write += io_write;
+            if (status != KERN_SUCCESS) {
 
               IOObjectRelease(parent);
 
               IOObjectRelease(drive);
 
               CFRelease(properties);
+
+              continue;
             }
+
+            stats = (CFDictionaryRef)CFDictionaryGetValue(
+                properties, CFSTR(kIOBlockStorageDriverStatisticsKey));
+
+            if (!stats) {
+
+              IOObjectRelease(parent);
+
+              IOObjectRelease(drive);
+
+              CFRelease(properties);
+
+              continue;
+            }
+
+            nValue = (CFNumberRef)CFDictionaryGetValue(
+                stats, CFSTR(kIOBlockStorageDriverStatisticsBytesReadKey));
+
+            CFNumberGetValue(nValue, kCFNumberSInt64Type, &io_read);
+
+            proc_io2.read += io_read;
+
+            nValue = (CFNumberRef)CFDictionaryGetValue(
+                stats, CFSTR(kIOBlockStorageDriverStatisticsBytesWrittenKey));
+
+            CFNumberGetValue(nValue, kCFNumberSInt64Type, &io_write);
+
+            proc_io2.write += io_write;
+
+            IOObjectRelease(parent);
+
+            IOObjectRelease(drive);
+
+            CFRelease(properties);
           }
         }
       }
@@ -312,9 +317,12 @@ int ProcManager::_probe() {
       };
 
       memory.freeram = vm_stat.free_count;
+
       memory.totalram = vm_stat.active_count + vm_stat.inactive_count +
                         vm_stat.wire_count + vm_stat.free_count;
+
       memory.sharedram = vm_stat.active_count;
+
       memory.bufferram = vm_stat.inactive_count;
     }
   }

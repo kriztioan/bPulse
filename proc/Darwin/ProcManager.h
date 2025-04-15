@@ -10,6 +10,10 @@
 #ifndef PROCMANAGER_H_
 #define PROCMANAGER_H_
 
+#if (MAC_OS_X_VERSION_MAX_ALLOWED < 120000) // before Monterey
+#define kIOMainPortDefault kIOMasterPortDefault
+#endif
+
 #include <cstdlib>
 
 #include <sys/mount.h>
@@ -53,8 +57,9 @@
 #include <IOKit/storage/IOBlockStorageDriver.h>
 #include <IOKit/storage/IOMedia.h>
 
-#if !defined(MAC_OS_VERSION_12_0) || MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_12_0
-  #define kIOMainPortDefault kIOMasterPortDefault
+#if !defined(MAC_OS_VERSION_12_0) ||                                           \
+    MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_VERSION_12_0
+#define kIOMainPortDefault kIOMasterPortDefault
 #endif
 
 class ProcManager {
@@ -79,7 +84,7 @@ public:
     Host = 1L << 8,
     Users = 1L << 9,
     Battery = 1L << 10,
-    All = 1L << 12 
+    All = 1L << 12
   };
 
   struct s_cpu {
