@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include <functional>
+#include <memory>
 
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
@@ -42,9 +43,11 @@ public:
   int DrawArc(int x, int y, int radius1, int radius2, int angle1, int angle2,
               const std::string &color);
 
-  int DrawCircle(int x, int y, int radius1, int radius2, const std::string &color);
+  int DrawCircle(int x, int y, int radius1, int radius2,
+                 const std::string &color);
 
-  int DrawLine(int x1, int y1, int x2, int y2, int width, const std::string &color);
+  int DrawLine(int x1, int y1, int x2, int y2, int width,
+               const std::string &color);
 
   int DrawText(int x1, int y1, std::string text, const std::string &color,
                int align = TEXT::ALIGN::LEFT);
@@ -90,7 +93,7 @@ public:
 private:
   GlyphSet _xfont = None;
 
-  XGlyphInfo *_xglyphinfo = nullptr;
+  std::unique_ptr<XGlyphInfo[]> _xglyphinfo;
 
   XRenderColor _clear = {0x0000, 0x0000, 0x0000, 0x0000};
 

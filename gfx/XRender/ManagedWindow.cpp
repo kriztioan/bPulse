@@ -22,10 +22,6 @@ ManagedWindow::~ManagedWindow() {
 
   if (_xfont) {
 
-    delete _xglyphinfo;
-
-    _xglyphinfo = nullptr;
-
     XRenderFreeGlyphSet(xdisplay, _xfont);
 
     _xfont = None;
@@ -135,9 +131,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
   if (_xfont) {
 
-    delete _xglyphinfo;
-
-    _xglyphinfo = nullptr;
+    delete _xglyphinfo.release();
 
     XRenderFreeGlyphSet(xdisplay, _xfont);
 
@@ -166,7 +160,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
   _xfont = XRenderCreateGlyphSet(
       xdisplay, XRenderFindStandardFormat(xdisplay, PictStandardA8));
 
-  _xglyphinfo = new XGlyphInfo['~' - ' ' + 1];
+  _xglyphinfo = std::make_unique<XGlyphInfo[]>('~' - ' ' + 1);
 
   for (char ch = ' '; ch <= '~'; ch++) {
 
@@ -195,17 +189,20 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     int stride = (_xglyphinfo[ch - ' '].width + 3) & ~3;
 
-    char map[stride * _xglyphinfo[ch - ' '].height];
+    std::unique_ptr<char[]> map =
+        std::make_unique<char[]>(stride * _xglyphinfo[ch - ' '].height);
+
+    char *map_ptr = map.get();
 
     for (int row = 0; row < _xglyphinfo[ch - ' '].height; row++) {
 
-      memcpy(map + row * stride,
+      memcpy(map_ptr + row * stride,
              bitmap->buffer + row * _xglyphinfo[ch - ' '].width,
              _xglyphinfo[ch - ' '].width);
     }
 
-    XRenderAddGlyphs(xdisplay, _xfont, &g_id, &(_xglyphinfo[ch - ' ']), 1, map,
-                     stride * _xglyphinfo[ch - ' '].height);
+    XRenderAddGlyphs(xdisplay, _xfont, &g_id, &(_xglyphinfo[ch - ' ']), 1,
+                     map_ptr, stride * _xglyphinfo[ch - ' '].height);
   }
 
   FT_Done_Face(face);
@@ -215,8 +212,8 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
   return 0;
 }
 
-int ManagedWindow::DrawText(int x, int y, std::string text, const std::string &color,
-                            int align) {
+int ManagedWindow::DrawText(int x, int y, std::string text,
+                            const std::string &color, int align) {
 
   if (!_xfont) {
 
@@ -273,7 +270,8 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
     ++nxpoints;
   }
 
-  XPointFixed xpoints[nxpoints];
+  std::unique_ptr<XPointFixed[]> xpoints =
+      std::make_unique<XPointFixed[]>(nxpoints);
 
   float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
         da = (a2 - a1) / (nxpoints - 3), cosfa1 = cosf(a1), sinfa1 = -sinf(a1);
@@ -300,7 +298,7 @@ int ManagedWindow::DrawRenderedArc(int x, int y, int radius1, int radius2,
   xpoints[i].y = XDoubleToFixed(-sinf(a2) * radius1 + y);
 
   XRenderCompositeTriStrip(xdisplay, PictOpAdd, xbrush, xpict, None, 0, 0,
-                           xpoints, nxpoints);
+                           xpoints.get(), nxpoints);
 
   return 0;
 }

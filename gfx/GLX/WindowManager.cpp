@@ -298,7 +298,7 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
 
   GLXFBConfig *glxfbconfigs = glXChooseFBConfig(
                   _xdisplay, DefaultScreen(_xdisplay), VisData, &nglxfbconfig),
-              glxfbconfig = 0;
+              glxfbconfig = None;
 
   XVisualInfo *xvisual = nullptr;
 
@@ -337,6 +337,12 @@ WindowManager::CreateWindow(int xpos, int ypos, int width, int height,
     XFree(xvisual);
 
     xvisual = nullptr;
+  }
+
+  if (glxfbconfig == None) {
+    printf("Failed to find suitable GLXFBConfig\n");
+
+    return nullptr;
   }
 
   XFree(glxfbconfigs);

@@ -13,6 +13,7 @@
 #include <cmath>
 
 #include <array>
+#include <memory>
 #include <string>
 #include <unordered_map>
 
@@ -21,8 +22,8 @@
 
 #include <GL/glew.h>
 #define GL_SILENCE_DEPRECATION
-#include <GLFW/glfw3.h>
 #include <GL/gl.h>
+#include <GLFW/glfw3.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -32,11 +33,11 @@ namespace TEXT {
 enum ALIGN { LEFT = 0, CENTER, RIGHT };
 };
 
-struct _GLXFontInfo {
+typedef struct GLXFontInfo {
   GLuint texture;
   unsigned int width;
   unsigned int height;
-};
+} _GLXFontInfo;
 
 class ManagedWindow {
 
@@ -94,7 +95,7 @@ public:
 private:
   GLuint _glxfont;
 
-  _GLXFontInfo *_glxfontinfo = nullptr;
+  std::unique_ptr<_GLXFontInfo[]> _glxfontinfo;
 
   std::unordered_map<std::string, std::array<unsigned char, 4>> _glxcolors;
 

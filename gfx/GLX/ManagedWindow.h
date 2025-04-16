@@ -18,14 +18,16 @@
 
 #include <functional>
 
+#include <memory>
+
 #include <X11/Xatom.h>
 #include <X11/Xlib.h>
 
 #define GL_GLEXT_PROTOTYPES 1
 #include <GL/gl.h>
 #include <GL/glx.h>
-#include "GL/glext.h"
 
+#include "GL/glext.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -35,11 +37,11 @@ namespace TEXT {
 enum ALIGN { LEFT = 0, CENTER, RIGHT };
 };
 
-struct _GLXFontInfo {
+typedef struct GLXFontInfo {
   GLuint texture;
   unsigned int width;
   unsigned int height;
-};
+} GLXFontInfo;
 
 class ManagedWindow {
 
@@ -51,9 +53,11 @@ public:
   int DrawArc(int x, int y, int radius1, int radius2, int angle1, int angle2,
               const std::string &color);
 
-  int DrawCircle(int x, int y, int radius1, int radius2, const std::string &color);
+  int DrawCircle(int x, int y, int radius1, int radius2,
+                 const std::string &color);
 
-  int DrawLine(int x1, int y1, int x2, int y2, int width, const std::string &color);
+  int DrawLine(int x1, int y1, int x2, int y2, int width,
+               const std::string &color);
 
   int DrawText(int x1, int y1, std::string text, const std::string &color,
                int align = TEXT::ALIGN::LEFT);
@@ -95,7 +99,7 @@ public:
 private:
   GLuint _glxfont;
 
-  _GLXFontInfo *_glxfontinfo = nullptr;
+  std::unique_ptr<GLXFontInfo[]> _glxfontinfo;
 
   std::unordered_map<std::string, std::array<unsigned char, 4>> _glxcolors;
 

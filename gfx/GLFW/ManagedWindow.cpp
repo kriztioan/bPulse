@@ -26,8 +26,6 @@ ManagedWindow::~ManagedWindow() {
     }
 
     glDeleteLists(_glxfont, '~' - ' ' + 1);
-
-    delete[] _glxfontinfo;
   }
 
   if (xcursor) {
@@ -149,9 +147,10 @@ int ManagedWindow::DrawGLXArc(int x, int y, int radius1, int radius2,
     ++nglxpoints;
   }
 
-  GLfloat glxpoints[nglxpoints * 2];
+  std::unique_ptr<GLfloat[]> glxpoints =
+      std::make_unique<GLfloat[]>(nglxpoints * 2);
 
-  glVertexPointer(2, GL_FLOAT, 0, glxpoints);
+  glVertexPointer(2, GL_FLOAT, 0, glxpoints.get());
 
   float a1 = M_PI * angle1 / 180.0, a2 = M_PI * angle2 / 180.0,
         da = (a2 - a1) / (nglxpoints - 3), cosfa1 = cosf(a1),
@@ -204,7 +203,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     glDeleteLists(_glxfont, '~' - ' ' + 1);
 
-    delete[] _glxfontinfo;
+    delete[] _glxfontinfo.release();
   }
 
   FT_Library library;
@@ -228,7 +227,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
   _glxfont = glGenLists('~' - ' ' + 1);
 
-  _glxfontinfo = new _GLXFontInfo['~' - ' ' + 1];
+  _glxfontinfo = std::make_unique<GLXFontInfo[]>('~' - ' ' + 1);
 
   for (char ch = ' '; ch <= '~'; ch++) {
 
@@ -243,7 +242,9 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     _glxfontinfo[ch - ' '].height = face->glyph->bitmap.rows;
 
-    GLubyte buffer[2 * face->glyph->bitmap.width * face->glyph->bitmap.rows];
+    std::unique_ptr<GLubyte[]> buffer = std::make_unique<GLubyte[]>(
+        2 * face->glyph->bitmap.width * face->glyph->bitmap.rows);
+
     for (int row = 0; row < face->glyph->bitmap.rows; row++) {
 
       for (int col = 0; col < face->glyph->bitmap.width; col++) {
@@ -261,17 +262,15 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, face->glyph->bitmap.width,
                  face->glyph->bitmap.rows, 0, GL_LUMINANCE_ALPHA,
-                 GL_UNSIGNED_BYTE, buffer);
+                 GL_UNSIGNED_BYTE, buffer.get());
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-    int yoffset = face->glyph->bitmap.rows;
-
     glNewList(_glxfont + ch, GL_COMPILE);
 
-    glTranslatef(face->glyph->bitmap_left, -yoffset, 0);
+    glTranslatef(face->glyph->bitmap_left, -face->glyph->bitmap_top, 0);
 
     glBindTexture(GL_TEXTURE_2D, _glxfontinfo[ch - ' '].texture);
 
@@ -288,8 +287,8 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    glTranslatef(-face->glyph->bitmap_left + face->glyph->advance.x / 64.0,
-                 yoffset, 0);
+    glTranslatef(face->glyph->bitmap_left + face->glyph->advance.x / 64.0,
+                 face->glyph->bitmap_top, 0);
 
     glEndList();
   }
