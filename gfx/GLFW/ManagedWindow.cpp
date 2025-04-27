@@ -270,7 +270,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     glNewList(_glxfont + ch, GL_COMPILE);
 
-    glTranslatef(face->glyph->bitmap_left, -face->glyph->bitmap_top, 0);
+    glTranslatef(0.0f, -face->glyph->bitmap_top, 0);
 
     glBindTexture(GL_TEXTURE_2D, _glxfontinfo[ch - ' '].texture);
 
@@ -287,8 +287,7 @@ int ManagedWindow::SetFont(const std::string &font, int size) {
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
-    glTranslatef(face->glyph->bitmap_left + face->glyph->advance.x / 64.0,
-                 face->glyph->bitmap_top, 0);
+    glTranslatef(face->glyph->advance.x / 64.0, face->glyph->bitmap_top, 0);
 
     glEndList();
   }

@@ -166,7 +166,7 @@ int ApplicationManager::RunLoop() {
 
         if (FD_ISSET(eventhandler->first, &testfds)) {
 
-          if ((ret = eventhandler->second()) != 0) {
+          if (eventhandler->second() != 0) {
 
             break;
           }
@@ -211,8 +211,7 @@ int ApplicationManager::RunLoop() {
       if (timercmp(&dt, &_timeout, <)) {
 
         timersub(&_timeout, &dt, &timeouttest);
-      }
-      else {
+      } else {
 
         timerclear(&timeouttest);
       }
