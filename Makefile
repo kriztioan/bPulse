@@ -1,4 +1,4 @@
-PROG:=bpulse
+PROGS:=bpulse
 PLATFORM:=$(shell uname -s)
 PLATFORM_DIR:=proc/$(PLATFORM)
 ifeq ($(USE_GLFW),1)
@@ -23,7 +23,8 @@ CPP_FILES:=$(wildcard $(SRC_DIR)/*.cpp) $(wildcard $(PLATFORM_DIR)/*.cpp) $(wild
 OBJ_FILES:=$(patsubst $(SRC_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(CPP_FILES))
 OBJ_FILES:=$(patsubst $(PLATFORM_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(OBJ_FILES))
 OBJ_FILES:=$(patsubst $(GFX_DIR)/%.cpp,$(OBJ_DIR)/%.o,$(OBJ_FILES))
-CPPFLAGS:=-std=c++17 -O3 -I./include -I$(PLATFORM_DIR) -I$(GFX_DIR)
+DEP_FILES:=deps.d
+CPPFLAGS:=-std=c++17 -O3 -MMD -MF $(DEP_FILES) -I./include -I$(PLATFORM_DIR) -I$(GFX_DIR)
 LIBS+=-lpng -lX11 -lXext -lfreetype
 FRAMEWORKS:=
 ifeq ($(PLATFORM),Darwin)
@@ -33,8 +34,12 @@ else
 	CPPFLAGS+=-I/usr/include/freetype2
 endif
 
-$(PROG): $(OBJ_FILES)
-	$(CXX) -o $@ $^ $(FRAMEWORKS) $(LIBS)
+all: $(PROGS)
+
+-include $(DEP_FILES)
+
+$(PROGS): $(OBJ_FILES)
+	$(CXX) -o $@ $^ $(FRAMEWORKS) $(LIBS) $(CPPFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
 	$(CXX) -c $< -o $@ $(CPPFLAGS)
@@ -46,4 +51,4 @@ $(OBJ_DIR)/%.o: $(GFX_DIR)/%.cpp
 	$(CXX) -c $< -o $@ $(CPPFLAGS)
 
 clean:
-	$(RM) $(OBJ_FILES) $(PROG)
+	$(RM) $(DEP_FILES) $(OBJ_FILES) $(PROGS)
