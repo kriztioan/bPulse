@@ -111,6 +111,13 @@ int ProcManager::_probe() {
             static_cast<float>(cpu_info[ncpu].cpu_ticks[CPU_STATE_IDLE]);
       }
 
+      err = vm_deallocate(mach_task_self(), (vm_address_t)cpu_info, n_cpu_info);
+
+      if (err != KERN_SUCCESS) {
+
+        return -1;
+      }
+
       proc_cpu2.total =
           proc_cpu2.user + proc_cpu2.nice + proc_cpu2.sys + proc_cpu2.idle;
 
